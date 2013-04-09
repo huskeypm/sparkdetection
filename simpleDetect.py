@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pylab as plt
 #from lsm_viewer import *
 from signaltools import *
@@ -331,6 +333,7 @@ Notes:
 
   # Phase 1 - detections using simple kernel 
   numFr=20 # dont recommend more than this for demeaning reasons 
+  print "Using -fileDir %s" % fileDir
   (stack,signals) = doit(fileDir,numFr=numFr)
 
   quit()
