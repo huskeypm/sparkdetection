@@ -2,13 +2,21 @@ import numpy as np
 import matplotlib.pylab as plt
 #from lsm_viewer import *
 from signaltools import *
+
+import matplotlib
+matplotlib.use('Agg')
+
 #import mach
 # sys.path.append('/net/home/huskeypm/bin/Computational_Tools/signalProcessing/')
+#doit(fileDir="/Users/huskeypm/localTemp/121201/110510_4_lsm/")
+
+
 
 
 # whitener seems to eat signal 
 whitener=1
 marg=20
+altfroot=1
 
 class empty:pass
 
@@ -122,7 +130,7 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
 
   ## params 
   if(mode=="BL"):
-    fRoot = "Feb13-13-113_lsm"
+    fRoot = altfroot
     fExt  = ".tif"
     stackxRange = np.array([[100,175],[100,175]])
     noisexRange = np.array([[400,475],[  0, 75]])
@@ -134,7 +142,8 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     #stackxRange = np.array([768,1024])
     stackxRange = np.array([[768,1024],[0,256]])
     #noisexRange = np.array([512,768])
-    noisexRange = np.array([[512,768],[0,256]])
+    #noisexRange = np.array([[512,768],[0,256]])
+    noisexRange = np.array([[ 56,256],[56,256]])
     
 
   
@@ -328,6 +337,8 @@ Notes:
       fileDir=sys.argv[i+1]
     if(arg=="-whitener"):
       whitener=1
+    if(arg=="-froot"):
+      altfroot=sys.argv[i+1]
 
   # Phase 1 - detections using simple kernel 
   numFr=20 # dont recommend more than this for demeaning reasons 
