@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pylab as plt
 #from lsm_viewer import *
 from signaltools import *
@@ -140,10 +142,18 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     fRoot = "110510_4_lsm_t0"
     fExt  = "_c0002.tif"
     #stackxRange = np.array([768,1024])
-    stackxRange = np.array([[768,1024],[0,256]])
+    #stackxRange = np.array([[768,1024],[0,256]])
+    stackxRange = np.array([[768,968],[56,256]])
     #noisexRange = np.array([512,768])
     #noisexRange = np.array([[512,768],[0,256]])
     noisexRange = np.array([[ 56,256],[56,256]])
+
+  ## check dim
+  dstack = stackxRange[:,1]-stackxRange[:,0]
+  dnoise = noisexRange[:,1]-noisexRange[:,0]
+  assert(dstack[0]==dstack[1]),"stackxRange must be square"
+  assert(dnoise[0]==dnoise[1]),"noisexRange must be square"
+  assert(dnoise[0]>=dstack[1]),"noisexRange must be greater or equal to stackxRange for now"
     
 
   
@@ -186,7 +196,8 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     d=bytscl(np.flipud(dataDemeaned[i,:,:]))
     plt.pcolormesh(d)
     c=plt.gcf()
-    n = "img%.2d" % i
+    n = "img_demeaned%.2d" % i
+    plt.gray()
     c.savefig(n)
 
   ## whiten 
@@ -194,6 +205,7 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     print "Whitening"
     noiseSize = np.shape(noiseStack)[1]
     psd = GetAveragePSD(noiseStack,np.mean(noiseStack,axis=0),noiseSize)
+    printimg(np.log(psd),"logPSD.png")
     from congrid import congrid
     psd = congrid(psd,np.shape(dataDemeaned[0,:,:]))
 
@@ -332,6 +344,7 @@ Notes:
   if len(sys.argv) < 2:
       raise RuntimeError(msg)
 
+  numFr=20 # dont recommend more than this for demeaning reasons 
   for i,arg in enumerate(sys.argv):
     if(arg=="-fileDir"):
       fileDir=sys.argv[i+1]
@@ -339,9 +352,11 @@ Notes:
       whitener=1
     if(arg=="-froot"):
       altfroot=sys.argv[i+1]
+    if(arg=="-numFrames"):
+      numFr = sys.argv[i+1]
 
   # Phase 1 - detections using simple kernel 
-  numFr=20 # dont recommend more than this for demeaning reasons 
+  print "Using -fileDir %s" % fileDir
   (stack,signals) = doit(fileDir,numFr=numFr)
 
   quit()
