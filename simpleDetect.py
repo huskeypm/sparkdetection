@@ -1,16 +1,16 @@
-import numpy as np
+# sys.path.append('/net/home/huskeypm/bin/Computational_Tools/signalProcessing/')
+# sys.path.append('/home/huskeypm/sources/sparkdetection/')                    
+#doit(fileDir="/Users/huskeypm/localTemp/121201/110510_4_lsm/")
 import matplotlib
 matplotlib.use('Agg')
+import numpy as np
 import matplotlib.pylab as plt
 #from lsm_viewer import *
 from signaltools import *
+from simpleDetect import *
 
-import matplotlib
-matplotlib.use('Agg')
 
 #import mach
-# sys.path.append('/net/home/huskeypm/bin/Computational_Tools/signalProcessing/')
-#doit(fileDir="/Users/huskeypm/localTemp/121201/110510_4_lsm/")
 
 
 
@@ -43,7 +43,7 @@ def ProcessFrame(stackSub,dataDemeaned,dataFiltered,frNum,THRESH_PARM=10000,exce
   # don't move
   fvar = np.var(sm)
   fmax = np.max(sm)
-  print "Max %f Var %f Max/Var %f" % (fmax,fvar,fmax/fvar) 
+  print "Fr %d Max %f Var %f Max/Var %f" % (frNum,fmax,fvar,fmax/fvar) 
   
   
   ## threshold 
@@ -114,15 +114,35 @@ def ProcessFrame(stackSub,dataDemeaned,dataFiltered,frNum,THRESH_PARM=10000,exce
 
   return nEvents
   
+
+def domovavg(data,start=-1,numFr=-1):
+  ## params 
+  doMovAvg=1
+  movAvgForward=1
+  movAvgBackward=1
+
+  if(start==-1):
+    start=0;
+    numFr = stackSub.shape[0]
+
+  s = start+movAvgBackward
+  n = numFr-1- movAvgForward
+  fproc = np.arange(n)+s
   
+  print "Need co-registration here"
+  movAvg = np.zeros([fproc.shape[0],data.shape[1],data.shape[2]])
+  ctr=0
+  for i in fproc:
+    movAvg[ctr,:] = np.mean(data[(i-movAvgBackward):(i+movAvgForward),],axis=0)
+    ctr+=1
+
+  return movAvg 
 
   
 # Main function for calling the algorithm routines 
 def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
   ## params 
   doMovAvg=1
-  movAvgForward=1
-  movAvgBackward=1
   THRESH_PARM=10000
   
   ## adjust
@@ -134,8 +154,9 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
   if(mode=="BL"):
     fRoot = altfroot
     fExt  = ".tif"
-    stackxRange = np.array([[100,175],[100,175]])
+    stackxRange = np.array([[ 75,150],[100,175]]) # remeber, img is flipped
     noisexRange = np.array([[400,475],[  0, 75]])
+    THRESH_PARM=33 # obtained by taking max of 'smoothed/filtered' image 
 
   elif(mode=="FB"):
     # "110510_4_lsm_t0%.3d_c0002.tif"
@@ -147,6 +168,7 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     #noisexRange = np.array([512,768])
     #noisexRange = np.array([[512,768],[0,256]])
     noisexRange = np.array([[ 56,256],[56,256]])
+    THRESH_PARM=7.
 
   ## check dim
   dstack = stackxRange[:,1]-stackxRange[:,0]
@@ -166,6 +188,7 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     infiles.append(infile)
   
   stackAll = loadstack(infiles,numChannels=1)
+  print "MIGHT CONSIDER FLIPUD FOR ALL IMAGES< SO EASIER TO COMPARE PCOLORMESH AND ORIG TIF"
   # 
   
   ## get region I'm interested in 
@@ -179,32 +202,31 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
 
   ## move avg
   if(doMovAvg==1):
-    print "Need co-registration here"
-    movAvg = np.zeros([fproc.shape[0],stackSub.shape[1],stackSub.shape[2]])
-    ctr=0
-    for i in fproc:
-      movAvg[ctr,:] = np.mean(stackSub[(i-movAvgBackward):(i+movAvgForward),],axis=0)
-      ctr+=1
+    movAvg=domovavg(stackSub)
     stackSub = movAvg
     THRESH_PARM=5000
-    fproc = np.arange(stackSub.shape[0])
 
   ## demean images
+  fproc = np.arange(stackSub.shape[0])
   avg=np.mean(stackSub,axis=0)
+  printimg(avg,"average.png")
   dataDemeaned = stackSub - avg
   for i in fproc:                  
-    d=bytscl(np.flipud(dataDemeaned[i,:,:]))
-    plt.pcolormesh(d)
-    c=plt.gcf()
+    #d=bytscl(np.flipud(dataDemeaned[i,:,:]))
+    #plt.pcolormesh(d)
+    #c=plt.gcf()
     n = "img_demeaned%.2d" % i
-    plt.gray()
-    c.savefig(n)
+    #plt.gray()
+    #c.savefig(n)
+    printimg(dataDemeaned[i,:,:],n)
 
   ## whiten 
   if(whitener==1):  
     print "Whitening"
     noiseSize = np.shape(noiseStack)[1]
-    psd = GetAveragePSD(noiseStack,np.mean(noiseStack,axis=0),noiseSize)
+    noiseMeanImg = np.mean(noiseStack,axis=0)
+    # (wms,psd) = whiten(noiseStack[i,:,:],noiseMeanImg
+    psd = GetAveragePSD(noiseStack,noiseMeanImg,noiseSize)                  
     printimg(np.log(psd),"logPSD.png")
     from congrid import congrid
     psd = congrid(psd,np.shape(dataDemeaned[0,:,:]))
@@ -219,7 +241,8 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     for i in fproc:    
       # this works, whiten2 does not 
       d = dataDemeaned[i,]
-      z = whiten(d,np.mean(dataDemeaned,axis=0),psd=psd)[0]
+      zeros=np.zeros(d.shape) # already demeaned, so just use zeros
+      z = whiten(d,zeros,psd=psd)[0]
       # trim out edge part, which has edge effects from FFT
       margSize = np.shape(avg)[0]
       marg=2
@@ -239,7 +262,6 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
       n = "whitimg%.2d" % i
       c.savefig(n)
 
-    THRESH_PARM=7.
     dataDemeaned =whitened
 
   
