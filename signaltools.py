@@ -5,6 +5,10 @@ import pylab as p
 import scipy.fftpack as fftp
 from smooth import *
 
+#
+# Revision: display imags with correct aspect ratio
+#
+
 ## IMG 
 # rescales image to 0-256 or to predefined values 
 def bytscl(d,minVal="none",maxVal="none"):
@@ -36,11 +40,18 @@ def printimg(data,filename):
   p.gcf().savefig(filename)
 
 # short cut for displaying images to screen in ipython
-def viewGrayScale(data):
+def viewGrayScale(data,flipud=False):
   import Image
   from StringIO import StringIO
  
-  p.pcolormesh(data)
+  p.figure()
+  p.subplot(111,aspect='equal')
+  if(flipud):
+    p.pcolormesh(np.flipud(data))
+  else:
+    p.pcolormesh(data)
+
+  # saving image to view 
   IO = StringIO()
   p.savefig(IO,format='png')
   IO.seek(0)

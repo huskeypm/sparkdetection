@@ -19,6 +19,8 @@ from simpleDetect import *
 whitener=1
 marg=20
 altfroot=1
+movAvgForward=1
+movAvgBackward=1
 
 class empty:pass
 
@@ -118,8 +120,6 @@ def ProcessFrame(stackSub,dataDemeaned,dataFiltered,frNum,THRESH_PARM=10000,exce
 def domovavg(data,start=-1,numFr=-1):
   ## params 
   doMovAvg=1
-  movAvgForward=1
-  movAvgBackward=1
 
   if(start==-1):
     start=0;
@@ -188,8 +188,15 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     infiles.append(infile)
   
   stackAll = loadstack(infiles,numChannels=1)
-  print "MIGHT CONSIDER FLIPUD FOR ALL IMAGES< SO EASIER TO COMPARE PCOLORMESH AND ORIG TIF"
-  # 
+
+  # baseline images, so appear on same scale
+  stackAll[:,0,0]=np.min(stackAll[:,:,:])
+  stackAll[:,0,1]=np.max(stackAll[:,:,:])
+
+
+  if 0:
+    viewGrayScale(stackAll[0,:,:],flipud=True)
+    pcolormesh(flipud(np.mean(stackAll[8:12,:,:],axis=0))
   
   ## get region I'm interested in 
   #stackSub=stackAll[:,:,768:1024]
@@ -359,6 +366,8 @@ Usage:
 
 Notes:
   In development
+
+  REMEMBER TO ADD LSM READONER FROM JUSTIN 
 
 """
   remap = "none"
