@@ -28,11 +28,13 @@ def bytscl(d,minVal="none",maxVal="none"):
   return g
 
 # save grayscale image of 'data' to filename 
-def printimg(data,filename):
+# was printimg
+def saveimg(data,filename):
   w = int((data.shape)[1]/1024. * 16)
   h = int((data.shape)[0]/1024. * 16)
   figprops = dict(figsize=(w,h), dpi=100)
   fig1 = p.figure(**figprops)
+  p.subplot(111,aspect='equal')
   p.gray()
   d = np.flipud(data) # for images
   p.pcolormesh(d)
@@ -80,7 +82,7 @@ def loadstack(infiles,numChannels=0,keepChannelNum=0):
   #stack = stack[:,rp[0,0]:rp[0,1], rp[1,0]:rp[1,1]]               
 
 
-  #printimg(stack[7,:,:],"x.png")
+  #saveimg(stack[7,:,:],"x.png")
 
   return stack
 
@@ -117,6 +119,7 @@ def ApplyNoiseFloor(psd,energy):
   psd[psd < energy] = energy
 
 # Deconvolves signal by powerspectral density 
+# Substracts datamean from data
 # Option is given to apply window to data to prevent edge (Gibbs) effects
 def whiten(data, datamean,psd="none",window="none"):
   demean = data-datamean
@@ -128,15 +131,15 @@ def whiten(data, datamean,psd="none",window="none"):
     demean = ham*demean
 
   if(psd!="none"):
-   print "Using input PSD"
+   print "Whitening using input PSD"
 
   else:
-   print  "Computing PSD"
+   print  "Computing PSD (with slight smoothing) for whitening "
    psd = CalcPsd(demean)
    psd = smooth(psd,size=2)
 
 
-  #printimg(np.log(psd),"psd.png")
+  #saveimg(np.log(psd),"psd.png")
 
   # whiten
   unsafeidx = np.where(psd <= 0.0)
@@ -187,13 +190,14 @@ def whiten2(m,psd="none",sigma=3):
   return(dmw,psds)
 
 # Computes PSD based on PSD in each frame 
+# Substracts meanImg from images 
 def GetAveragePSD(ims,meanImg,size):
   from congrid import congrid
   avgPSD = np.zeros((size,size))
   n= ims.shape[0]
   for i in range(n):
     (wms,psd) = whiten(ims[i,:,:],meanImg)       
-    # normalize
+    # normalize (Parsevals) 
     psdn= psd/np.prod(np.shape(psd))
     # rescale to size of image
     psdr= congrid(psdn,(size,size),minusone=True)

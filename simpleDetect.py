@@ -1,4 +1,4 @@
-# sys.path.append('/net/home/huskeypm/bin/Computational_Tools/signalProcessing/')
+#figure sys.path.append('/net/home/huskeypm/bin/Computational_Tools/signalProcessing/')
 # sys.path.append('/home/huskeypm/sources/sparkdetection/')                    
 #doit(fileDir="/Users/huskeypm/localTemp/121201/110510_4_lsm/")
 import matplotlib
@@ -12,15 +12,25 @@ from simpleDetect import *
 
 #import mach
 
+# validation
+# python ~/sources/sparkdetection/simpleDetect.py -fileDir "./"
+
+#
+# Todo
+#  Expand to use data region larger than noise region
+#  Can we explot the gact that the correlation placne is blobby when there is a # detection???
+
 
 
 
 # whitener seems to eat signal 
 whitener=1
-marg=20
+margDetect=20
+marg=2
 altfroot=1
 movAvgForward=1
 movAvgBackward=1
+mode="FB" 
 
 class empty:pass
 
@@ -30,7 +40,16 @@ class empty:pass
 # frNum - frame number
 # sys.path.append('/net/home/huskeypm/bin/Computational_Tools/signalProcessing/')
 
-def ProcessFrame(stackSub,dataDemeaned,dataFiltered,frNum,THRESH_PARM=10000,excerpts=[]):
+def ProcessDetection(stackSub,dataDemeaned,dataFiltered,frNum,threshParam=10000,
+    stackAll=-1,stackxRange=-1,infiles=[],  
+    excerpts=[]):
+
+  ## title
+  if(len(infiles) > 0): 
+    title = infiles[frNum]
+  else:
+    title ="Fr %d " % frNum
+
   ## get frame 
   sfr = stackSub[frNum,:,:]
   fr = dataDemeaned[frNum,:,:]
@@ -39,18 +58,16 @@ def ProcessFrame(stackSub,dataDemeaned,dataFiltered,frNum,THRESH_PARM=10000,exce
   maxfr = np.max(dataDemeaned)
   maxsm  = np.max(dataFiltered)
 
-  
-  
   # report
   # don't move
   fvar = np.var(sm)
   fmax = np.max(sm)
-  print "Fr %d Max %f Var %f Max/Var %f" % (frNum,fmax,fvar,fmax/fvar) 
+  print "Fr %d Max %f Var %f Max/Var %f %s" % (frNum,fmax,fvar,fmax/fvar,title) 
   
   
   ## threshold 
-  # choose 3 sigma above mean?
-  mask = sm > THRESH_PARM
+  mask = sm > threshParam
+  #print threshParam
   
   ## find contiguous pixels 
   import scipy.ndimage as ndimage
@@ -64,6 +81,7 @@ def ProcessFrame(stackSub,dataDemeaned,dataFiltered,frNum,THRESH_PARM=10000,exce
   trackfr = fr.copy()
   tracksm = sm.copy()
   nEvents = nb_labels
+  peakLocs=[]
   for i in np.arange(nb_labels)+1:
     # bracket pixel region 
     slice_x, slice_y = ndimage.find_objects(label_im==i)[0]
@@ -77,16 +95,17 @@ def ProcessFrame(stackSub,dataDemeaned,dataFiltered,frNum,THRESH_PARM=10000,exce
     tracksfr[peakLoc[0],peakLoc[1]]=2 * maxsfr
     trackfr[peakLoc[0],peakLoc[1]]=2 * maxfr
     tracksm[peakLoc[0],peakLoc[1]]=2 * maxsm
+    peakLocs.append(peakLoc)
     #print peakLoc
 
     # save
     try:
-      c =sm[(peakLoc[0]-marg):(peakLoc[0]+marg),(peakLoc[1]-marg):(peakLoc[1]+marg)]
+      c =sm[(peakLoc[0]-margDetect):(peakLoc[0]+margDetect),(peakLoc[1]-margDetect):(peakLoc[1]+margDetect)]
       #print np.shape(excerpts)
     except:
       1
     else:
-      if(c.shape[0] ==2*marg and c.shape[1]==2*marg):
+      if(c.shape[0] ==2*margDetect and c.shape[1]==2*margDetect):
         excerpt=empty()
         excerpt.c = c.copy()
         excerpts.append(excerpt)
@@ -97,17 +116,56 @@ def ProcessFrame(stackSub,dataDemeaned,dataFiltered,frNum,THRESH_PARM=10000,exce
   #print "max ", np.max(tracksfr)
   trackfr[0] = 0; trackfr[1] = 2*maxfr
   tracksm[0] = 0; tracksm[1] = 2*maxsm
+
+  #if(stackAll!=-1):
+  if 1:
+    pls = np.array(peakLocs).reshape(-1, 2)
+    
+
+    # indices are flipped,based on how we extracted stackSub from stackAll in the first place
+    # (see after loadstack()), so I flip the x/y coordinates from the detection 
+    plsOrig = np.array([pls[:,1],pls[:,0]]).T + [marg,marg] + stackxRange[:,0]
+    img=dataFiltered[frNum,:,:].copy()
+    imgb=stackAll[frNum,:,:].copy()
+    maxall = np.max(stackAll)
+    maxall = 100 # specifc to one case
+    imgb [ imgb > maxall ] = maxall
+   
+    if(len(peakLocs)>0):
+      imgb[ plsOrig[:,1],plsOrig[:,0] ]  = maxall 
+      img[ pls[:,0], pls[:,1]]=2*maxsfr
+    imgb[0:2,0] = [0,maxall]
+
+    plt.clf()
+    plt.subplot(211,aspect="equal")
+    plt.pcolormesh(np.flipud(stackAll[frNum,:,:]))
+    plt.pcolormesh(np.flipud(stackSub[frNum,:,:]))
+    plt.title("Raw: " + infiles[frNum])
+
+    plt.subplot(212,aspect="equal")
+    plt.pcolormesh(np.flipud(imgb))
+    plt.pcolormesh(np.flipud(img))
+    plt.title("Processed data")          
+
+    fname = "orig_%.3d.png" % frNum
+    g = plt.gcf()
+    g.set_size_inches(10.,10.)        
+    g.savefig(fname)
+    1
+    
   
   
   ## save marked result
   w=4
   plt.gray()
-  plt.figure(figsize=[4*w,w])
-  plt.subplot(1,3,1)
+  #plt.figure(figsize=[4*w,w])
+  plt.clf()
+  plt.title("Raw: " + title)
+  plt.subplot(131,aspect="equal") 
   plt.pcolormesh(np.flipud(tracksfr))
-  plt.subplot(1,3,2)
+  plt.subplot(132,aspect="equal") 
   plt.pcolormesh(np.flipud(trackfr))
-  plt.subplot(1,3,3)
+  plt.subplot(133,aspect="equal") 
   plt.pcolormesh(np.flipud(tracksm))
   c = plt.gcf()
   n = "processed%.2d" % frNum
@@ -123,7 +181,7 @@ def domovavg(data,start=-1,numFr=-1):
 
   if(start==-1):
     start=0;
-    numFr = stackSub.shape[0]
+    numFr = data.shape[0]
 
   s = start+movAvgBackward
   n = numFr-1- movAvgForward
@@ -143,32 +201,48 @@ def domovavg(data,start=-1,numFr=-1):
 def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
   ## params 
   doMovAvg=1
-  THRESH_PARM=10000
+  threshParam=10
+  numStdDevs = 3
   
-  ## adjust
-  s = start+movAvgBackward
-  n = numFr-1- movAvgForward
-  fproc = np.arange(n)+s
 
   ## params 
+  # Select square subregion for processing and noise estimation  
   if(mode=="BL"):
-    fRoot = altfroot
+    fRoot = altfroot     
     fExt  = ".tif"
-    stackxRange = np.array([[ 75,150],[100,175]]) # remeber, img is flipped
+    start = 43
+    numFr = 50
+    numFr = 10
+
+    # hard to see events for this in ordinal image
+    #stackxRange = np.array([[ 75,150],[100,175]]) # REMEMBER, x/y coords are fliiped in pcolormesh and upsidedown
+    stackxRange = np.array([[150,225],[ 90,165]]) # remeber, img is flipped
+    #stackxRange = np.array([[150,225],[ 75,150]]) # remeber, img is flipped
     noisexRange = np.array([[400,475],[  0, 75]])
-    THRESH_PARM=33 # obtained by taking max of 'smoothed/filtered' image 
+    threshParam=10 # using congrid on PSD
+    threshParam=10.# using Rect on PSD
+    gaussianFilterSize=4
+    determineThreshold=0
 
   elif(mode=="FB"):
     # "110510_4_lsm_t0%.3d_c0002.tif"
     fRoot = "110510_4_lsm_t0"
     fExt  = "_c0002.tif"
     #stackxRange = np.array([768,1024])
-    #stackxRange = np.array([[768,1024],[0,256]])
-    stackxRange = np.array([[768,968],[56,256]])
+    stackxRange = np.array([[768,1024],[0,256]])
+    #stackxRange = np.array([[768,968],[56,256]])
     #noisexRange = np.array([512,768])
-    #noisexRange = np.array([[512,768],[0,256]])
-    noisexRange = np.array([[ 56,256],[56,256]])
-    THRESH_PARM=7.
+    noisexRange = np.array([[512,768],[0,256]])
+    #noisexRange = np.array([[ 56,256],[56,256]])
+    threshParam=10.  # using congrid on PSD         
+    threshParam=8.   # using Rect on PSD         
+    gaussianFilterSize=4
+    determineThreshold=0
+
+  ## adjust
+  s = start+movAvgBackward
+  n = numFr-1- movAvgForward
+  fproc = np.arange(n)+s
 
   ## check dim
   dstack = stackxRange[:,1]-stackxRange[:,0]
@@ -196,7 +270,12 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
 
   if 0:
     viewGrayScale(stackAll[0,:,:],flipud=True)
-    pcolormesh(flipud(np.mean(stackAll[8:12,:,:],axis=0))
+  if 1:
+    plt.figure()
+    plt.subplot(111,aspect="equal") 
+    plt.gray()
+    plt.pcolormesh(stackAll[0,:,:])
+    plt.gcf().savefig("firstFrame_pcolormesh.png")
   
   ## get region I'm interested in 
   #stackSub=stackAll[:,:,768:1024]
@@ -206,26 +285,57 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
   #pcolormesh(stackSub[0])
   #pcolormesh(noiseSub[0])
 
+  # to generate nice image comparison 
+  if 0:
+    r=np.arange(3)+6   
+    r=np.arange(3)+11
+    #r = 10
+    plt.subplot(311,aspect='equal')
+    plt.title("frames: " + p.array2string(r))
+    plt.pcolormesh(np.mean(stackAll[r,:,:],axis=0))
+    #plt.pcolormesh(stackAll[r,:,:])
+    plt.subplot(312,aspect='equal')
+    #plt.pcolormesh(stackxRange[0,0]+np.arange(75),stackxRange[1,0]+np.arange(75),stackSub[r,:,:])
+    plt.title("stack subplot") 
+    plt.pcolormesh(stackxRange[0,0]+np.arange(75),stackxRange[1,0]+np.arange(75),np.mean(stackSub[r,:,:],axis=0))
+    plt.subplot(313,aspect='equal')
+    plt.title("noise") 
+    plt.pcolormesh(noisexRange[0,0]+np.arange(75),noisexRange[1,0]+np.arange(75),np.mean(noiseStack[r,:,:],axis=0))
+
 
   ## move avg
+  # To diminish some of the incoherent noise 
   if(doMovAvg==1):
     movAvg=domovavg(stackSub)
     stackSub = movAvg
-    THRESH_PARM=5000
 
   ## demean images
+  # Removes persistent features, like TT network 
   fproc = np.arange(stackSub.shape[0])
   avg=np.mean(stackSub,axis=0)
-  printimg(avg,"average.png")
+  avgn=np.mean(noiseStack,axis=0)
+  saveimg(avg,"average.png")
   dataDemeaned = stackSub - avg
-  for i in fproc:                  
-    #d=bytscl(np.flipud(dataDemeaned[i,:,:]))
-    #plt.pcolormesh(d)
-    #c=plt.gcf()
-    n = "img_demeaned%.2d" % i
-    #plt.gray()
-    #c.savefig(n)
-    printimg(dataDemeaned[i,:,:],n)
+  noiseDemeaned = noiseStack- avgn
+
+  if 0:
+    plt.figure()
+    for r in fproc:                  
+      n = "img_demeaned%.2d" % i
+      plt.clf()          
+      subplot(131,aspect='equal')
+      plt.title("Average") 
+      pcolormesh(avg)           
+      subplot(132,aspect='equal')
+      plt.title("Original") 
+      pcolormesh(stackSub[r,:,:])
+      subplot(133,aspect='equal')
+      plt.title("Demeaned") 
+      pcolormesh(dataDemeaned[r,:,:])
+      saveimg(dataDemeaned[i,:,:],n)
+
+
+
 
   ## whiten 
   if(whitener==1):  
@@ -233,58 +343,120 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     noiseSize = np.shape(noiseStack)[1]
     noiseMeanImg = np.mean(noiseStack,axis=0)
     # (wms,psd) = whiten(noiseStack[i,:,:],noiseMeanImg
-    psd = GetAveragePSD(noiseStack,noiseMeanImg,noiseSize)                  
-    printimg(np.log(psd),"logPSD.png")
+    psdn = GetAveragePSD(noiseStack,noiseMeanImg,noiseSize)                  
+
+    if 0: # for testing psd with white noise 
+      # validated (mostly, not quite white, but is probably due to pseudorandom number gen)
+      testNoise = np.reshape(np.random.rand(np.prod(noiseStack.shape)),noiseStack.shape)
+      testpsd = GetAveragePSD(testNoise,np.mean(testNoise,axis=0),testNoise.shape[1])
+
+    # reshape psd to fit demeaned data 
+    saveimg(np.log(psdn),"logPSD.png")
     from congrid import congrid
-    psd = congrid(psd,np.shape(dataDemeaned[0,:,:]))
+    psd = psdn.copy()
+    #psd = congrid(psd,np.shape(dataDemeaned[0,:,:]))
+    print "Energy before: " % np.sum(psdn)
+    import scipy.interpolate
+    ox = np.arange(psdn.shape[0])
+    oy = np.arange(psdn.shape[1])
+    f=scipy.interpolate.RectBivariateSpline(ox,oy,psdn,kx=1,ky=1)
+    nx = np.arange(avg.shape[0])
+    ny = np.arange(avg.shape[1])
+    rx = psdn.shape[0] / np.float(avg.shape[0])
+    ry = psdn.shape[1] / np.float(avg.shape[1])
+    psd  = f(nx,ny)
+    print "WARNING: I think this needs to be rescaled for Parseval"
+    saveimg(psd,"y.png") 
 
     #pcolormesh(psd)
 
     margSize = np.shape(avg)[0]
-    marg=2
     blank =np.zeros((margSize-2*marg,margSize-2*marg))
     numFr = np.shape(fproc)[0]
     whitened = np.zeros((numFr,blank.shape[0],blank.shape[0]))
+    whitenedn = np.zeros((numFr,blank.shape[0],blank.shape[0]))
     for i in fproc:    
       # this works, whiten2 does not 
       d = dataDemeaned[i,]
-      zeros=np.zeros(d.shape) # already demeaned, so just use zeros
-      z = whiten(d,zeros,psd=psd)[0]
+      n = noiseDemeaned[i,]
+      # actually, data is not mean zero, so mean still needed
+      # zeros=np.zeros(d.shape) # already demeaned, so just use zeros
+      #z = whiten(d,zeros,psd=psd)[0]
+      z = whiten(d,np.mean(d),psd=psd)[0]
+      zn = whiten(n,np.mean(n),psd=psdn)[0]
+   
+      if 0:  # for testing whitening (should go inside whiten function) 
+        # Validated 
+        testd = np.zeros([75,75])  + np.reshape(np.random.rand(75*75),[75,75])  
+        testd[35:39,35:39] = 10
+        testpsd = np.zeros([75,75]) + 0.1
+        testpsd[:,10:65 ]=1.0  
+        subplot(121,aspect='equal')
+        pcolormesh( testd )
+        subplot(122,aspect='equal')
+        pcolormesh( whiten(testd,np.mean(testd),psd=testpsd)[0] )
+
       # trim out edge part, which has edge effects from FFT
-      margSize = np.shape(avg)[0]
-      marg=2
       z = z[marg:(margSize-marg),marg:(margSize-marg)] 
+      zn = zn[marg:(margSize-marg),marg:(margSize-marg)] 
       #whitened[i,0:z.shape[0],0:z.shape[1]] = z
       whitened[i,:,:]=z
+      whitenedn[i,:,:]=zn
 
       #
       plt.figure()
-      plt.subplot(121,aspect='equal')
-      plt.pcolormesh(d)
+      plt.subplot(131,aspect='equal')
       plt.title("unwhite")
-      plt.subplot(122,aspect='equal')
-      plt.pcolormesh(z)
+      plt.pcolormesh(d)
+      plt.subplot(133,aspect='equal')
+      plt.title("psd")
+      plt.pcolormesh(psd)
+      plt.colorbar()
+      plt.subplot(132,aspect='equal')
       plt.title("white")
+      plt.pcolormesh(z)
       c=plt.gcf()
-      n = "whitimg%.2d" % i
+      n = "whiteimg%.2d" % i
       c.savefig(n)
 
     dataDemeaned =whitened
+    noiseDemeaned =whitenedn
 
   
 
   
   ## matched filter (here just a gaussian for now) 
-  dataFiltered = np.zeros(np.shape(dataDemeaned))
+  print "Estimating detection threshold from random data (just one slice)" 
+  noisevar  = np.var(noiseDemeaned) # data has been whitened and demeaned)
+  i = 0 #
+  false=noiseDemeaned[i,:,:]
+  #false = np.reshape(noiseVar*np.random.rand(np.prod(false.shape)),false.shape)
+  #false -= np.mean(false)
+  sm = smooth(false,size=gaussianFilterSize)
+  print " Max (noise): ", np.max(sm)
+  if determineThreshold:
+    threshParam = np.max(sm) + numStdDevs * np.var(sm) 
+    
 
-  # This should be a Gaussian filter, but it looks like I'm using 
+  # Detection using Gaussian filter, but it looks like I'm using 
   # a boxcar function here. I tried several approaches, so the Gaussian
   # version is elsewhere. 
+  dataFiltered = np.zeros(np.shape(dataDemeaned))
   if(imgfilter=="none"):
     for i in fproc:                  
       #need to find correct gaussian
-      sm = smooth(dataDemeaned[i,:,:],size=4)
+      sm = smooth(dataDemeaned[i,:,:],size=gaussianFilterSize)
       dataFiltered[i,:,:] = sm
+
+      if 0:
+        plt.clf()
+        plt.subplot(121,aspect='equal')
+        pcolormesh(dataDemeaned[i,:,:])
+        colorbar()
+        plt.subplot(122,aspect='equal')
+        pcolormesh(dataFiltered[i,:,:])    
+        colorbar()
+
 
   # This is a filter I'm developing, but its not supported currently  
   else: 
@@ -294,13 +466,15 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
       print np.shape(dataDemeaned[i,:,:])
       sm = mach.matchedfilter(dataDemeaned[i,:,:],imgfilter)
       dataFiltered[i,:,:] = sm
-      THRESH_PARM=0.07
+      threshParam=0.07
   
   ## operate on frame of interest 
   totEvents = 0
   excerpts=[]
   for frNum in fproc:
-    nEvents = ProcessFrame(stackSub,dataDemeaned,dataFiltered,frNum,THRESH_PARM=THRESH_PARM,excerpts=excerpts)
+    nEvents = ProcessDetection(
+      stackSub,dataDemeaned,dataFiltered,frNum,threshParam=threshParam,excerpts=excerpts,
+      stackAll=stackAll,stackxRange=stackxRange,infiles=infiles)
     totEvents += nEvents
   
   print "Found %d events" % totEvents
@@ -383,12 +557,15 @@ Notes:
       whitener=1
     if(arg=="-froot"):
       altfroot=sys.argv[i+1]
-    if(arg=="-numFrames"):
-      numFr = sys.argv[i+1]
+    if(arg=="-mode"):
+      mode= sys.argv[i+1]
+    if(arg=="-altfroot"): 
+      altfroot= sys.argv[i+1]
+
 
   # Phase 1 - detections using simple kernel 
   print "Using -fileDir %s" % fileDir
-  (stack,signals) = doit(fileDir,numFr=numFr)
+  (stack,signals) = doit(fileDir,numFr=numFr,mode=mode)  
 
   quit()
 
