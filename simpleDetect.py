@@ -17,7 +17,7 @@ from simpleDetect import *
 
 #
 # Todo
-#  Expand to use data region larger than noise region
+#  DONE: Expand to use data region larger than noise region
 #  Can we explot the gact that the correlation placne is blobby when there is a # detection???
 
 
@@ -212,11 +212,11 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     fExt  = ".tif"
     start = 43
     numFr = 50
-    numFr = 10
 
     # hard to see events for this in ordinal image
     #stackxRange = np.array([[ 75,150],[100,175]]) # REMEMBER, x/y coords are fliiped in pcolormesh and upsidedown
-    stackxRange = np.array([[150,225],[ 90,165]]) # remeber, img is flipped
+    #stackxRange = np.array([[150,225],[ 90,165]]) # remeber, img is flipped
+    stackxRange = np.array([[125,250],[ 75,200]]) # remeber, img is flipped
     #stackxRange = np.array([[150,225],[ 75,150]]) # remeber, img is flipped
     noisexRange = np.array([[400,475],[  0, 75]])
     threshParam=10 # using congrid on PSD
@@ -249,7 +249,7 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
   dnoise = noisexRange[:,1]-noisexRange[:,0]
   assert(dstack[0]==dstack[1]),"stackxRange must be square"
   assert(dnoise[0]==dnoise[1]),"noisexRange must be square"
-  assert(dnoise[0]>=dstack[1]),"noisexRange must be greater or equal to stackxRange for now"
+  #assert(dnoise[0]>=dstack[1]),"noisexRange must be greater or equal to stackxRange for now"
     
 
   
@@ -370,11 +370,13 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
 
     #pcolormesh(psd)
 
-    margSize = np.shape(avg)[0]
+    margSize = np.shape(psd)[0]
+    margnSize = np.shape(psdn)[0]
     blank =np.zeros((margSize-2*marg,margSize-2*marg))
+    blankn =np.zeros((margnSize-2*marg,margnSize-2*marg))
     numFr = np.shape(fproc)[0]
     whitened = np.zeros((numFr,blank.shape[0],blank.shape[0]))
-    whitenedn = np.zeros((numFr,blank.shape[0],blank.shape[0]))
+    whitenedn = np.zeros((numFr,blankn.shape[0],blankn.shape[0]))
     for i in fproc:    
       # this works, whiten2 does not 
       d = dataDemeaned[i,]
@@ -398,7 +400,7 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
 
       # trim out edge part, which has edge effects from FFT
       z = z[marg:(margSize-marg),marg:(margSize-marg)] 
-      zn = zn[marg:(margSize-marg),marg:(margSize-marg)] 
+      zn = zn[marg:(margnSize-marg),marg:(margnSize-marg)] 
       #whitened[i,0:z.shape[0],0:z.shape[1]] = z
       whitened[i,:,:]=z
       whitenedn[i,:,:]=zn
