@@ -1,0 +1,29 @@
+
+need to add this
+
+
+
+%Load in .lsm file
+im=tiffread(file);
+%create 3D matrix with desired channel data
+for i=1:length(im)
+    mat(:,:,i)=im(1,i).data{channel};
+end
+ 
+%Convert data to uint8 (so its viewable in tif format)
+mat=double(mat);
+im=im./16;
+im=uint8(im);
+ 
+%Save each slice as seperate file with correct naming sequence
+for i=1:size(im,3)
+    if i<10
+        name=['110510_4_lsm_t000' num2str(i) '_c0002.tif'];
+    elseif i<100
+        name=['110510_4_lsm_t00' num2str(i) '_c0002.tif'];
+    else
+        name=['110510_4_lsm_t0' num2str(i) '_c0002.tif'];
+    end
+    imwrite(im(:,:,i),name,'tiff');
+end
+
