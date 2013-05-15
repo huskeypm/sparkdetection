@@ -31,6 +31,7 @@ altfroot=1
 movAvgForward=1
 movAvgBackward=1
 mode="FB" 
+vmdFile = "none"
 
 class empty:pass
 
@@ -261,7 +262,10 @@ def doit(fileDir,start=0,numFr=100 ,imgfilter="none",mode="FB"):
     infile += fExt
     infiles.append(infile)
   
-  stackAll = loadstack(infiles,numChannels=1)
+  if(lsmFile!="none"):
+    stackAll = Image.open(lsmFile)
+  else:
+    stackAll = loadstack(infiles,numChannels=1)
 
   # baseline images, so appear on same scale
   stackAll[:,0,0]=np.min(stackAll[:,:,:])
@@ -563,6 +567,9 @@ Notes:
       mode= sys.argv[i+1]
     if(arg=="-altfroot"): 
       altfroot= sys.argv[i+1]
+    if(arg=="-loadlsm"):
+      vmdFile =sys.argv[i+1]
+      
 
 
   # Phase 1 - detections using simple kernel 
