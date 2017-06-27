@@ -6,7 +6,8 @@ import scipy.fftpack as fftp
 import numpy as np
 def matchedFilter(
   dimg, # imgs wherein signal (filter) is hypothesized to exist
-  filter# signal 
+  daFilter,# signal 
+  parsevals=False
   ):
   # placeholder for 'noise' component (will refine later)
   fsC = np.ones(np.shape(dimg))
@@ -19,10 +20,10 @@ def matchedFilter(
 
   ## zero-pad filter
   si = np.shape(dimg)
-  sf = np.shape(filter)
+  sf = np.shape(daFilter)
   # add zeros
   zeropad = np.zeros(si)
-  zeropad[:sf[0],:sf[1]]=filter
+  zeropad[:sf[0],:sf[1]]=daFilter
   # shift original ligand by its Nyquist
   szeropad = np.roll(\
     np.roll(zeropad,-sf[0]/2+si[0]/2,axis=0),-sf[1]/2+si[1]/2,axis=1)
@@ -39,6 +40,9 @@ def matchedFilter(
   sh = fftp.ifft2(fsh)
   h = fftp.ifftshift(sh)
   h = np.real(h)
+
+  ## apply parsevals
+  h *= 1/np.float(np.prod(np.shape(h)))
   return h 
 
 
