@@ -24,7 +24,7 @@ def drawHexagon(origin=center(0,0),i=0,j=0,size=1, wcenter=True):
     horzDist = width
 
     if j%2==1:
-      xoffset = np.sqrt(3)/2 * height/2.
+      xoffset = -np.sqrt(3)/2 * height/2.
     else:     
       xoffset = 0  
     yoffset = size*np.sin(np.pi/6.) 
@@ -44,8 +44,14 @@ def drawHexagon(origin=center(0,0),i=0,j=0,size=1, wcenter=True):
     coords = np.array(coords)#,[7,2]
     return coords 
 
-def drawHexagonalGrid(xIter,yIter,size=1):
+def drawHexagonalGrid(
+  xIter, # unit cells in x direction
+  yIter,
+  size=1,# size of unit cell
+  edged=True  # return entries for which x,y > 0,0
+  ):
     
+  # generate 
   origin = center(0.,0.)
   coords = []        
   for i in range(xIter): 
@@ -53,8 +59,16 @@ def drawHexagonalGrid(xIter,yIter,size=1):
         coord = drawHexagon(origin,i,j,size)
         coords.append(coord)
 
+  # reorg into nparray 
   dim = np.shape(coords)
   coords = np.reshape(coords,[np.prod(dim)/2.,2])
+
+  # return only those entries w x,y > 0,0 
+  if edged:
+    coords= [ x for x in np.vsplit( coords,coords.shape[0] )  if x[0,0]>=0. and x[0,1]>=0.]
+    dim = np.shape(coords)
+    coords = np.reshape(coords,[np.prod(dim)/2.,2])
+ 
   return coords 
 
 
