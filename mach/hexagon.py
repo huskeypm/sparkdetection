@@ -44,6 +44,7 @@ def drawHexagon(origin=center(0,0),i=0,j=0,size=1, wcenter=True):
     coords = np.array(coords)#,[7,2]
     return coords 
 
+# Draws perfect hexagonal grid 
 def drawHexagonalGrid(
   xIter, # unit cells in x direction
   yIter,
@@ -70,6 +71,27 @@ def drawHexagonalGrid(
     coords = np.reshape(coords,[np.prod(dim)/2.,2])
  
   return coords 
+
+# Draws a hexagonal grid with two twinned regions; interface (reflection) is at x=0 
+def drawTwinnedHexagonalGrid(
+  xIter,
+  yIter,
+  size=1): 
+
+  coords = drawHexagonalGrid(xIter/2,yIter/2,size=size)
+  coords2 = np.copy(coords)
+  # reflect
+  coords2[:,0]*=-1
+  # shift by 1 bond distance
+  coords2[:,0]-= size 
+  final = np.concatenate((coords,coords2),axis=0)
+  # moves reflection plane to x=0
+  final[:,0]+= 0.5*size 
+
+  return final 
+  
+  
+ 
 
 
 
