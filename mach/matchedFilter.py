@@ -37,6 +37,7 @@ def matchedFilter(
 
   ## matched filter
   fsh = fsdimg * fsfilter / fsC
+  #fsh = np.real( fsh ) 
   sh = fftp.ifft2(fsh)
   h = fftp.ifftshift(sh)
   h = np.real(h)
