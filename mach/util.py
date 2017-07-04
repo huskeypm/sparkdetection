@@ -4,6 +4,7 @@ import cv2
 def myplot(img,fileName=None):
   plt.axis('equal')
   plt.pcolormesh(img, cmap='gray')
+  plt.colorbar()
   if fileName!=None:
     plt.gcf().savefig(fileName,dpi=300)
 
@@ -61,3 +62,16 @@ def TestFilter(
     myplot(R)
     return R,daMax
 
+# renormalizes images to exist from 0-255
+def renorm(img):
+    img = img-np.min(img)
+    img/= np.max(img)
+    img*=255
+    return img
+
+def GetAnnulus(region,sidx,margin):
+      subregion = region[(sidx[0]-margin):(sidx[0]+margin+1),
+                         (sidx[1]-margin):(sidx[1]+margin+1)]        
+      area = np.float(np.prod(np.shape(subregion)))
+      intVal = np.sum(subregion)  
+      return subregion, intVal, area
