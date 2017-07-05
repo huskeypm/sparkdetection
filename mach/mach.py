@@ -121,7 +121,7 @@ def isHit(corr,
     lobeArea-= dummyArea
     lobeNorm = lobeInt/lobeArea
     peakToLobe = peakNorm/lobeNorm
-    print "%e,%e, %f"%(peakNorm,lobeNorm, peakToLobe)    
+    print "%e, %e, %f"%(peakNorm,lobeNorm, peakToLobe)    
     
     if peakNorm > daMaxThresh and peakToLobe > sideLobeThresh:
       print "POSITIVE"
