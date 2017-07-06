@@ -27,7 +27,6 @@ def MACH2(
         #print np.shape(fft_volume)
         x[:,i] = np.ndarray.flatten( fft_volume )
     #end
-
     #mx = mean(x, 2);
     #c = ones(d,1);
     #dx = mean(conj(x) .* x, 2);
@@ -44,6 +43,7 @@ def MACH2(
 
     ## Dx
     dx = np.mean(np.conj(x) * x, axis=1);
+    #print np.shape(dx)
 
     ## Sx
     diff = np.transpose( x.transpose()-mx.transpose() )
