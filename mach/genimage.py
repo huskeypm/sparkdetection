@@ -1,11 +1,11 @@
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import numpy as np 
 from matplotlib.figure import Figure
-import hexagon
+import hexagonFFF
 # has annoying padding, but screw it 
-def GenerateImageFromScatter(scatterData,nxPix=512,size=10):
+def GenerateImageFromScatter(scatterData,nxPix=(1024),size=(10)):
     # if we want nxPix in the x and y directions, we need to create a figure with size w = nxPix/dpi
-    dpi =160. # apparently
+    dpi =160 # apparently
     dim = nxPix/dpi
     
     # call commands for generating saveable figure 
@@ -13,7 +13,10 @@ def GenerateImageFromScatter(scatterData,nxPix=512,size=10):
     #fig = Figure()                  
     canvas = FigureCanvas(fig)
     ax = fig.gca()
-    
+   
+    #print "scatData1", scatterData[:,0], "scatData2", scatterData[:,1]
+
+ 
     # do p[lotting]
     #ax.autoscale(tight=True)
     ax.set_aspect('equal')
@@ -28,13 +31,17 @@ def GenerateImageFromScatter(scatterData,nxPix=512,size=10):
     data = data[:,:,2]
     return data
 
-def GenLattice(mode="perfect"):
+def GenLattice(mode="perfect", angle=0):
   # generate lattice   
   if mode=="perfect":
-        pts = hexagon.drawHexagonalGrid(8,8,size=1)
-  else: # twinned
-        pts = hexagon.drawTwinnedHexagonalGrid(8,16,size=1) 
-    
+        pts = hexagonFFF.drawHexagonalGrid(16,16,size=2)
+  elif mode == "twinned":
+
+        pts = hexagonFFF.drawTwinnedHexagonalGrid(16,32,size=2) 
+  elif mode == "multi":
+	pts = hexagonFFF.drawMultiTwinnedHexagonalGrid(16,16,size=2)    
+  else:
+	pts = hexagonFFF.drawReflectionHexagonalGrid(angle,16,16,size=2)
     #plt.axis('equal')
     #plt.scatter(perfectPts[:,0],perfectPts[:,1],100)
   print np.shape(pts)
