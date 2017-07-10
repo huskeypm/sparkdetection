@@ -75,14 +75,14 @@ def MACH2(
 
 
 ## they do FFT sequentially. Not clear why
-def fftcorr(I,T):
+def fftcorr(I,T,correlationThreshold=1.6e8):
     fI = fftp.fftn(I)
     fT = fftp.fftn(T)
     c = np.conj(fI)*fT
     corr = fftp.ifftn(c)
     corr = np.real(corr)
     
-    whereMax,result= isHit(corr)
+    whereMax,result= isHit(corr,daMaxThresh = correlationThreshold)
     return corr, whereMax,result 
 
 ## checks for match in data based on peak/sidelobe thresholds

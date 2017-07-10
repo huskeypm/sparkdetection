@@ -18,7 +18,7 @@ def ReadImg(fileName,renorm=False,bound=False):
     if bound!=False:
 	img=img[bound[0]:bound[1],bound[0]:bound[1]]
     if renorm:# rescaling
-    	img = img/np.float(np.max(img))
+    	img = img / np.float(np.amax(img))
 
 
     return img  
