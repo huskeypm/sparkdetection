@@ -13,7 +13,6 @@ class twins:
 	self.y1 = y1
 	self.y2 = y2
 	
-  #def line(self, x1,
 def det(a,b):
 	return a[0]*b[1] - a[1]*b[0]
 def knowTwins(listTwins, coords):
@@ -39,15 +38,12 @@ def knowTwins(listTwins, coords):
 		modifiedList[instance1] = (x,paired1.x1, y, paired1.y1)
  	else: 
 		modifiedList[instance2] = (x,paired2.x2,y,paired2.y2) # this is dumb and probably doesnt work, will finish later
-       
 
 def hex_corner(center, size=1, i=0):
     angle_deg = 60. * i   + 30.
     angle_rad = np.pi / 180. * angle_deg
     return [center.x + size * np.cos(angle_rad),
                  center.y + size * np.sin(angle_rad)]
-
-
 
 def drawHexagon(origin=center(0,0),i=0,j=0,size=1, wcenter=True):
     # should go elsewhere
@@ -62,8 +58,6 @@ def drawHexagon(origin=center(0,0),i=0,j=0,size=1, wcenter=True):
     else:     
       xoffset = 0  
     yoffset = size*np.sin(np.pi/6.) 
-
-        
     hexCtr = center(origin.x+i*width+xoffset, origin.y+j*(size+yoffset))
 
     # center
@@ -87,23 +81,18 @@ def drawHexagonalGrid(
   cent = [0,0]
   ):
   origin = center(cent[0],cent[1])  
-  # generate 
   coords = []        
   for i in range(xIter): 
     for j in range(yIter): 
         coord = drawHexagon(origin,i,j,size)
         coords.append(coord)
 
-  # reorg into nparray 
   dim = np.shape(coords)
   coords = np.reshape(coords,[np.prod(dim)/2.,2])
-
-  # return only those entries w x,y > 0,0 
   if edged:
     coords= [ x for x in np.vsplit( coords,coords.shape[0] )  if x[0,0]>=0. and x[0,1]>=0.]
     dim = np.shape(coords)
     coords = np.reshape(coords,[np.prod(dim)/2.,2])
-  print np.shape(coords) 
   return coords 
 
 # Draws a hexagonal grid with two twinned regions; interface (reflection) is at x=0 
@@ -119,19 +108,12 @@ def drawTwinnedHexagonalGrid(
 
   # shift by 1 bond distance
   coords2[:,0]-= size 
-
   final = np.concatenate((coords,coords2),axis=0)
-  # moves reflection plane to x=0
   final[:,0]+= 0.5*size
-  #myarr = np.ones(200) 
-  #for vals in range(200):
-  #  myarr[vals] = 694+vals
-  #temp = np.delete(final,myarr, axis = 0)
-  #print np.shape(temp)
-  #print temp[301]
-
   return final 
-  
+
+#def remover(arr):
+#  copy = np.zeros_like(arr)  
   
 def drawMultiTwinnedHexagonalGrid(
   xIter,
@@ -139,54 +121,62 @@ def drawMultiTwinnedHexagonalGrid(
   size=1): 
 
   coords = drawHexagonalGrid(xIter,yIter,size=size)
-  #coords2 = np.copy(coords)
-  # reflect
-  #coords2[:,0]*=-1
-
-  # shift by 1 bond distance
-  #coords2[:,0]-= size 
-
-  #final = np.concatenate((coords,coords2),axis=0)
-  # moves reflection plane to x=0
-  #final[:,0]+= 0.5*size 
-  
-  # OK, so the plan is to send a call to the fxn knowTwins
-  # Once we find where the twins are, we strike throug the 
   final = coords
-  #myarr = np.ones(200) 
-  #for vals in range(200):
-  #  myarr[vals] = 700+vals
-  less = np.where(20<final[:,0])
 
-
-  #my = less[:,1]
-
-
-
-  #print "less", less
+  #grabbing the x values for overlap
+  less = np.where(5<final[:,0])
   Less = less[0]
-  #Less = less.reshape(len(less),1)
-  print "shape less", np.shape(Less)
-  more = np.where(final[:,0]<22)
+  more = np.where(final[:,0]<6)
   More = more[0]
-  print "more", np.shape(more[0][:])
   
-
+  #array-ifying
   this1 = np.asarray(More)
   this2 = np.asarray(Less)
-
-
+  
+  #pulling the overlapping region out to "skip" portion of unit cell to mimick twinning
   intersect = np.intersect1d(this1,this2)
-  print "intersect", intersect
-  #toDelete = np.where(interect)
   temp = np.delete(final,intersect, axis = 0)
-  print np.shape(temp)
-  print temp[301]
+  newL= np.where(temp[:,0]<6)[0]
+  newR= np.where(temp[:,0]>4)[0]
 
-  #mylist = knowTwins[]
-  return temp 
-  
-  
+  #grabbing the newpoints to reform image
+  this3 = np.asarray(newL)
+  this5 = np.asarray(newR)
+  leftInt = temp[0:(len(this3)),:]
+  start = (np.max(this3))
+  rightInt = temp[(start):,:]
+ 
+  #trouble starts here, whenever right+= is used a duplicate of the first point in rightInt appears
+  leftInt*=10
+  rightInt*=10 
+
+  L = leftInt.tolist()
+  R = rightInt.tolist()
+  Ls = [tuple(i) for i in L]
+  Rs = [tuple(i) for i in R]
+  newLeft = set(Ls)
+  newRight = set(Rs)
+
+  newL = np.array(list(newLeft))
+  newR = np.array(list(newRight))
+  newLeft =np.around(newL, decimals=1)
+  newRight = np.around(newR, decimals=1)
+  maxer = np.max(newLeft[:,0])
+  miner = np.min(newRight[:,0])
+  nopeL = np.where(newLeft[:,0]== maxer)[0]
+  nopeR = np.where(newRight[:,0] <60)[0]
+  #print " Righty ", newRight[nopeR,0]  
+  Lefty = np.delete(newLeft, nopeL, axis =0)
+  Righty = np.delete(newRight, nopeR, axis=0)
+  newLeft = Lefty
+  newRight = Righty
+  #print miner, " nopeR"  
+  #print "newRight ", newRight
+  newLeft[:,0] +=3.5*size
+  newRight[:,0]-=3.5*size
+  finals = np.concatenate((newLeft,newRight),axis=0)
+  finals/=10
+  return finals
 
 def drawReflectionHexagonalGrid(
   angle,
@@ -194,35 +184,34 @@ def drawReflectionHexagonalGrid(
   yIter,
   size=1,
   ):
-  
-  coords = drawHexagonalGrid(xIter/2,yIter/2,size=size)
-  coords2 = np.copy(coords)
-  newCoords = np.copy(coords)
-  newCoords[:,0] *= np.cos(angle)
-  newCoords[:,1] *= np.sin(angle)
-  coords2[:,0] *= -1*np.cos(angle)
-  coords2[:,1] *= -1*np.sin(angle)
- 
+  coords = drawMultiTwinnedHexagonalGrid(xIter, yIter, size)
+  newCoords = randrot(coords, angle)
+#  maxX = np.max(coords[:,0])
+#  minX = np.min(coords[:,0])
+#  avgX = (maxX+minX)/2
+#  maxY = np.max(coords[:,1])
+#  minY = np.min(coords[:,1])
+#  avgY = (maxY+minY)/2
+#  newCoords[:,0] -=avgX
+#  newCoords[:,1] -=avgY 
+#  newCoords[:,0] *= np.cos(angle)
+#  newCoords[:,1] *= np.sin(angle)
+  return newCoords 
 
+def rot(t):
+    R = np.array([[np.cos(t),-np.sin(t)],[np.sin(t),np.cos(t)]])
+    return R
 
-  print coords2[20,0]
+def randrot(coords, angle = 0):
+    if angle != 0:
+      R = rot( angle )
+      c = np.dot(R,np.transpose(coords))
+      c = np.transpose(c)
 
- 
-  # reflect
-  #coords2[:,0]*=-1*np.cos(angle)
-  
-  # shift by 1 bond distance
-  #coords2[:,0]-= size*np.cos(angle)
-
-  final = np.concatenate((newCoords,coords2),axis=0)
-  # moves reflection plane to x=0
-  final[:,0]+= 0.5*size
-  #myarr = np.ones(200) 
-  #for vals in range(200):
-  #  myarr[vals] = 694+vals
-  #temp = np.delete(final,myarr, axis = 0)
-  #print np.shape(temp)
-  #print temp[301]
-
-  return final
+    else:
+      t = (np.random.rand(1) * np.pi/4.)[0]
+      R = rot( t )
+      c = np.dot(R,np.transpose(coords))
+      c = np.transpose(c)
+    return c 
 

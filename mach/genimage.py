@@ -1,9 +1,9 @@
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import numpy as np 
 from matplotlib.figure import Figure
-import hexagonFFF
+import hexagon
 # has annoying padding, but screw it 
-def GenerateImageFromScatter(scatterData,nxPix=(1024),size=(10)):
+def GenerateImageFromScatter(scatterData,nxPix=(512),size=(10)):
     # if we want nxPix in the x and y directions, we need to create a figure with size w = nxPix/dpi
     dpi =160 # apparently
     dim = nxPix/dpi
@@ -13,10 +13,14 @@ def GenerateImageFromScatter(scatterData,nxPix=(1024),size=(10)):
     #fig = Figure()                  
     canvas = FigureCanvas(fig)
     ax = fig.gca()
-   
-    #print "scatData1", scatterData[:,0], "scatData2", scatterData[:,1]
+    print "max", np.max(scatterData[:,0]) , np.max(scatterData[:,1])
+    print "min", np.min(scatterData[:,0]) , np.min(scatterData[:,1])
+#    print "scatData1", np.shape(scatterData) #[:,0], "scatData2", scatterData[:,1]
+    sz = (11.7/(np.max(scatterData[:,1]) - np.min(scatterData[:,1])))**1.4*size
+    print "sz ", sz
 
- 
+    size = sz*(12.5/(np.max(scatterData[:,0]) - np.min(scatterData[:,0])))**1.4
+    print "size ", size 
     # do p[lotting]
     #ax.autoscale(tight=True)
     ax.set_aspect('equal')
@@ -34,27 +38,30 @@ def GenerateImageFromScatter(scatterData,nxPix=(1024),size=(10)):
 def GenLattice(mode="perfect", angle=0):
   # generate lattice   
   if mode=="perfect":
-        pts = hexagonFFF.drawHexagonalGrid(16,16,size=2)
-  elif mode == "twinned":
+        pts = hexagon.drawHexagonalGrid(8,8,size=1)
+        data = GenerateImageFromScatter(pts, 512, 10)
 
-        pts = hexagonFFF.drawTwinnedHexagonalGrid(16,32,size=2) 
+  elif mode == "twinned":
+        pts = hexagon.drawTwinnedHexagonalGrid(8,16,size=1) 
+        data = GenerateImageFromScatter(pts, 512, 10 )
   elif mode == "multi":
-	pts = hexagonFFF.drawMultiTwinnedHexagonalGrid(16,16,size=2)    
+
+	pts = hexagon.drawMultiTwinnedHexagonalGrid(8,8,size=1)    
+        data = GenerateImageFromScatter(pts, 512, 10)
   else:
-	pts = hexagonFFF.drawReflectionHexagonalGrid(angle,16,16,size=2)
+	pts = hexagon.drawReflectionHexagonalGrid(angle,8,8,size=1)
+        data = GenerateImageFromScatter(pts, 512, 10)
     #plt.axis('equal')
     #plt.scatter(perfectPts[:,0],perfectPts[:,1],100)
-  print np.shape(pts)
 
   ## convert to image
-  data = GenerateImageFromScatter(pts)
+  #data = GenerateImageFromScatter(pts)
   data = np.array(data,dtype=float)  
   # white pts on blk bg
   data = np.max(data) - data
   # normalize/rescale
   data = data - np.min(data)
   data /= np.max(data)  
-  print np.shape(data)  
     
   return  data    
 
