@@ -86,13 +86,16 @@ def drawHexagonalGrid(
     for j in range(yIter): 
         coord = drawHexagon(origin,i,j,size)
         coords.append(coord)
+	#print coord
 
+ 
   dim = np.shape(coords)
-  coords = np.reshape(coords,[np.prod(dim)/2.,2])
+  print "dim", dim
+  coords = np.reshape(coords,[int(np.prod(dim)/2.),2])
   if edged:
     coords= [ x for x in np.vsplit( coords,coords.shape[0] )  if x[0,0]>=0. and x[0,1]>=0.]
     dim = np.shape(coords)
-    coords = np.reshape(coords,[np.prod(dim)/2.,2])
+    coords = np.reshape(coords,[int(np.prod(dim)/2.),2])
   return coords 
 
 # Draws a hexagonal grid with two twinned regions; interface (reflection) is at x=0 
