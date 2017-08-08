@@ -69,9 +69,38 @@ def renorm(img):
     img*=255
     return img
 
-def GetAnnulus(region,sidx,margin):
+def GetAnnulus(region,sidx,innerMargin,outerMargin=None):
+  if outerMargin==None: 
+      # other function wasn't really an annulus 
+      raise RuntimeError("Antiquated. See GetRegion")
+
+  if innerMargin%2==0 or outerMargin%2==0:
+      print "WARNING: should use odd values for margin!" 
+
+  # grab entire region
+  outerRegion,dummy,dummy = GetRegion(region,sidx,outerMargin)
+
+  # block out interior to create annulus 
+  annulus = np.copy(outerRegion) 
+  s = np.shape(annulus)
+  aM = outerMargin - innerMargin
+  xMin,xMax = 0+aM, s[0]-aM
+  yMin,yMax = 0+aM, s[1]-aM
+  interior = np.copy(annulus[xMin:xMax,yMin:yMax])
+  annulus[xMin:xMax,yMin:yMax]=0. 
+
+  return annulus,interior
+
+def GetRegion(region,sidx,margin):
       subregion = region[(sidx[0]-margin):(sidx[0]+margin+1),
                          (sidx[1]-margin):(sidx[1]+margin+1)]        
       area = np.float(np.prod(np.shape(subregion)))
       intVal = np.sum(subregion)  
       return subregion, intVal, area
+
+def MaskRegion(region,sidx,margin,value=0):
+      region[(sidx[0]-margin):(sidx[0]+margin+1),
+                         (sidx[1]-margin):(sidx[1]+margin+1)]=value  
+
+
+
