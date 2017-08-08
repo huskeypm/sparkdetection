@@ -1,12 +1,14 @@
 import matplotlib.pylab as plt 
 import numpy as np 
 import cv2
-def myplot(img,fileName=None):
+def myplot(img,fileName=None,clim=None):
   plt.axis('equal')
   plt.pcolormesh(img, cmap='gray')
   plt.colorbar()
   if fileName!=None:
     plt.gcf().savefig(fileName,dpi=300)
+  if clim!=None:
+    plt.clim(clim)
 
 def ReadImg(fileName,renorm=False,bound=False):
     img = cv2.imread(fileName)
@@ -42,7 +44,7 @@ def CalcX(
     Xi = fftp.fft2( xi )    
     if debug:
       Xi = xi    
-    myplot(np.real(Xi))
+    #myplot(np.real(Xi))
     # flatten
     Xif = np.ndarray.flatten(Xi)
     X[i,:]=Xif
@@ -59,14 +61,14 @@ def TestFilter(
 
     daMax = np.max(np.real(R))
     print "Response %e"%( daMax )
-    myplot(R)
+    #myplot(R)
     return R,daMax
 
 # renormalizes images to exist from 0-255
-def renorm(img):
+def renorm(img,scale=255):
     img = img-np.min(img)
     img/= np.max(img)
-    img*=255
+    img*=scale 
     return img
 
 def GetAnnulus(region,sidx,innerMargin,outerMargin=None):

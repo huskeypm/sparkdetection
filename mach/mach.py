@@ -5,9 +5,10 @@ import matplotlib.pylab as plt
 # [imgRows imgCols timeSamples] = size(volumes{1});
 def MACH2(
     images,
-    alpha = 50,  
-    beta = 1e-12, 
-    gamma = 1e-12 
+    alpha = 50,    # weights noise spectrum (iid at this point) 
+    beta = 1e-12,  # weights spectral content of each image
+    gamma = 1e-12, # weights difference image
+    doFFT=True
     ):
     ## Create rasterized (vectorized ) FFT images 
     N, imgRows, imgCols = np.shape( images )
@@ -16,7 +17,6 @@ def MACH2(
     #x = zeros(d, N);
     x = np.zeros([d,N],np.dtype(np.complex128))
     #for i = 1 : N
-    doFFT=True
     for i in range(N):
         #fft_volume = fft3(double(volumes{i}));
         #x(:,i) = fft_volume(:);
@@ -64,7 +64,10 @@ def MACH2(
     #h = uint8(scale(h, min3(h), max3(h), 0, 255)); 
     h = mx / h_den;
     h = np.reshape(h, [imgRows, imgCols]);
-    h = np.real(fftp.ifftn(h)); 
+    if doFFT:
+      h = np.real(fftp.ifftn(h)); 
+    else: 
+      h = np.real(h)                   
     util.myplot(h)
     h = util.renorm(h)
     
@@ -75,14 +78,18 @@ def MACH2(
 
 
 ## they do FFT sequentially. Not clear why
-def fftcorr(I,T,correlationThreshold=1.6e8):
+def fftcorr(I,T,correlationThreshold=1.6e8,parsevals=False,verbose=True):
     fI = fftp.fftn(I)
     fT = fftp.fftn(T)
     c = np.conj(fI)*fT
     corr = fftp.ifftn(c)
     corr = np.real(corr)
+
+    if parsevals:
+      s = np.shape(corr)
+      corr = corr/np.float(np.prod(s))
     
-    whereMax,result= isHit(corr,daMaxThresh = correlationThreshold)
+    whereMax,result= isHit(corr,daMaxThresh = correlationThreshold,verbose=verbose)
     return corr, whereMax,result 
 
 ## checks for match in data based on peak/sidelobe thresholds
@@ -90,7 +97,7 @@ def isHit(corr,
     peakMargin=3,
     lobeMargin=20,
     daMaxThresh=1.6e8,
-    sideLobeThresh=1.03):
+    sideLobeThresh=1.03,verbose=True):
 
     dummyMargin = lobeMargin - 10
     daMax = np.max(corr)
@@ -107,28 +114,32 @@ def isHit(corr,
     sidx= np.argmax(scorr)
     sidx = np.unravel_index(sidx,np.shape(scorr))
     #util.myplot(scorr)
-    plt.plot(scorr[:,sidx[1]])
-    print sidx
+    #plt.title("Corr.") 
+    #plt.plot(scorr[sidx[0],:])
+    #print sidx
     
     # peak region 
-    peak, peakInt,peakArea = util.GetAnnulus(scorr,sidx,peakMargin)
+    peak, peakInt,peakArea = util.GetRegion(scorr,sidx,peakMargin)
     peakNorm = peakInt/peakArea
     
     # side loberegion 
-    dummy, dummyInt,dummyArea = util.GetAnnulus(scorr,sidx, dummyMargin)
-    lobe, lobeInt,lobeArea = util.GetAnnulus(scorr,sidx,lobeMargin)
+    dummy, dummyInt,dummyArea = util.GetRegion(scorr,sidx, dummyMargin)
+    lobe, lobeInt,lobeArea = util.GetRegion(scorr,sidx,lobeMargin)
     lobeInt -= dummyInt
     lobeArea-= dummyArea
     lobeNorm = lobeInt/lobeArea
     peakToLobe = peakNorm/lobeNorm
-    print "%e, %e, %f"%(peakNorm,lobeNorm, peakToLobe)    
+    if verbose: 
+      print "PeakNorm, lobeNorm, peakToLobe: %e, %e, %f"%(peakNorm,lobeNorm, peakToLobe)    
     
     if peakNorm > daMaxThresh and peakToLobe > sideLobeThresh:
-      print "POSITIVE"
+      if verbose: 
+        print "POSITIVE"
       result = True  
       
     else:
-      print "NEGATIVE"
+      if verbose: 
+        print "NEGATIVE"
       result = False
     return whereMax,result 
     
