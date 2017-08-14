@@ -78,9 +78,11 @@ def GetAnnulus(region,sidx,innerMargin,outerMargin=None):
 
   if innerMargin%2==0 or outerMargin%2==0:
       print "WARNING: should use odd values for margin!" 
+  #print "region shape", np.shape(region)
 
   # grab entire region
   outerRegion,dummy,dummy = GetRegion(region,sidx,outerMargin)
+  #print "region shape", np.shape(outerRegion)
 
   # block out interior to create annulus 
   annulus = np.copy(outerRegion) 

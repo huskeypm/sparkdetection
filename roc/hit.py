@@ -23,7 +23,7 @@ def EvaluateNextHit(image,superThresh,hits,
     sidx = np.argsort( flat )[::-1]
     top = np.unravel_index(sidx[0], np.shape(superThresh))
     #print top
-
+    #print "sidx", sidx
     ## Get signal/sidelobe ratio
     #signalInner,integratedValue,area = util.GetRegion(image,top,margin=7)
     #signalOuter,integratedValue,area = util.GetRegion(image,top,margin=13)
@@ -31,11 +31,18 @@ def EvaluateNextHit(image,superThresh,hits,
       image,top,innerMargin=innerMargin,outerMargin=outerMargin)
     mean,stddev = np.mean(annulus), np.std(annulus)
     integrated = np.sum(interior)
+    #print "top", top
+    #print "shape(interior)", np.shape(interior)
+    #print "interior", interior
+    #print "np.shape(annulus)", np.shape(annulus)
+    #print "integrated", integrated
+    #print "mean", mean
+
     value = integrated / mean
 
     ## mask image 
     util.MaskRegion(superThresh,top,outerMargin,value=0)
-
+    #print "value, you nerd", value
     ## tag solutions
     isHit = value > threshold
     if isHit:
