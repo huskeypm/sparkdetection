@@ -67,16 +67,17 @@ def GenLattice(mode="perfect", angle=0):
 
 import cv2
 # blurs and adds poisson noise 
-def AddRealism(img,noiseFloor=False): 
+def AddRealism(img,noiseFloor=False, scale = 0.3,Gauss =True): 
     # blur
-    blur = cv2.GaussianBlur(np.array(img,dtype=float),(3,3),0)
-    dim = np.shape(blur)
-    blur = blur - np.min(blur)
-    blur /= np.max(blur)
-
+    if Gauss:
+      blur = cv2.GaussianBlur(np.array(img,dtype=float),(3,3),0)
+      dim = np.shape(blur)
+      blur = blur - np.min(blur)
+      blur /= np.max(blur)
+           
     # add noise 
     #noise = np.random.randn( np.prod(dim))
-    scale =0.3
+    # this should be 0.3, noise cranked for ROC
     mean = 0.3
     noise = scale*np.random.poisson(mean, np.prod(dim))
     thresh = 1.
