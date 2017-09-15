@@ -107,4 +107,61 @@ def MaskRegion(region,sidx,margin,value=0):
                          (sidx[1]-margin):(sidx[1]+margin+1)]=value  
 
 
+import cv2
+import numpy as np
+from math import *
+
+
+def ConstructInteriorContour(extContour,
+                             distanceParam,
+                             imgDim
+                             ):
+
+    ## Construction of Interior Contour Given Outer Contour
+
+    # Script to construct an interior contour spaced a predescribed distance away from the exterior contour
+
+    # NOTE: This scales pretty badly and begins to take a lot of time for large images or with contours with many points
+    cv2Vers = cv2.__version__
+
+
+    # Testing to Find Points Within Contour, Calculate Minimum Distance of Each Point Away From Contour, Get Rid of it if Distance is Less than Predescribed Quantity
+
+
+    validPoints = []
+    for x in range(imgDim[1]):
+        for y in range(imgDim[0]):
+            # positive for interior points
+            distance = cv2.pointPolygonTest(extContour, (x,y), True)
+            if distance > sqrt(2) / 2 * distanceParam:
+                validPoints.append( np.asarray([x,y]))
+
+
+    # Create Mask of Interior Pixels to Create Interior Polygon
+
+
+    maskImg = np.zeros(imgDim)
+    for point in validPoints:
+        maskImg[point[1],point[0]] = 255
+
+    # Apply Gaussian Thresholding and Pull Out Contour
+
+
+    maskImg = maskImg.astype('uint8')
+    blockSize = 3
+    thinningParameter = -45
+    innerThresh = cv2.adaptiveThreshold(maskImg,255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,blockSize,thinningParameter)
+
+    if cv2Vers[0] == '3':
+        (_,innerContour,_) = cv2.findContours(innerThresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    else:
+        (innerContour,_) = cv2.findContours(innerThresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    areas = []
+    for cnt in (innerContour):
+        areas.append(cv2.contourArea(cnt))
+    maxArea = np.argmax(areas)
+    interiorContour = innerContour[maxArea]
+
+    return interiorContour
 
