@@ -63,69 +63,66 @@ def find_centers(X, K):
     # Initialize to K random centers
     oldmu = rand.sample(X, K)
     mu = rand.sample(X, K)
-    while not has_converged(mu, oldmu):
-        oldmu = mu
-        # Assign all points in X to clusters
-        clusters = cluster_points(X, mu)
-        # Reevaluate centers
-        mu = reevaluate_centers(oldmu, clusters)
+    if not has_converged(mu, oldmu):
+      while not has_converged(mu, oldmu):
+          oldmu = mu
+          # Assign all points in X to clusters
+          clusters = cluster_points(X, mu)
+          # Reevaluate centers
+          mu = reevaluate_centers(oldmu, clusters)
+    else:
+       clusters = cluster_points(X, mu)
     return(mu, clusters)
 
 
 
 
 
-def makeMask(threshold = 245, img = 'fusedCorrelated_Not_rotated_back30.png',iterater=False,iters=[]):
+def makeMask(threshold = 245, img = 'fusedCorrelated_Not_rotated_back30.png', iterater=False,iters=[]):
     
     if iterater:
-        cropper=[55,155,55,155]
-        Paint.correlateThresher(gray,gray2, threshold, cropper, iters)
+
+
+        #cropper=[55,155,55,155]
         maskList = []
+        print 'hop pff'
         for i, iteration in enumerate(iters):
                     print "iter", iteration
-                    img = 'fusedCorrelated_{}.png'.format(iteration)
-                    correlated = it.ReadImg(img)
+
+                    img1 = img +'{}.png'.format(iteration)
+                    #img2 = img2 +'{}.png'.format(iteration)
+                    correlated = it.ReadImg(img1)
+                    dims = np.shape(correlated)
                     #print 'correlated', np.shape(correlated)
                     corr = np.copy(correlated.flatten())
                     masker = (np.zeros_like(corr))
                     #print 'masker', np.shape(masker)
                     pts =np.argwhere(corr>threshold)
                     masker[pts] = corr[pts]
-                    newmasker= np.reshape(masker,(100,100))
+                    newmasker= np.reshape(masker,(dims[0],dims[1]))
                     it.myplot(newmasker)
+                   
                     threshed = np.argwhere(correlated>threshold)
-                    centers = find_centers(X = threshed, K=4)
+                    worthThreshing =  np.shape(threshed)
+                    print 'shape of number threshed over {}'.format(threshold), worthThreshing
 
+                    if np.max(worthThreshing) >40:
+                      K = worthThreshing[0]%5
+                      print 'shape of threshes', worthThreshing
+                      if K>=10:
+                        K=10
+                      X = threshed
+                      centers = find_centers(X, K)
+                      boxlist= []
+                      for c, center in enumerate(centers[0]):
+                              boxlist.append([int(np.floor(center[0])),int(np.floor(center[1]))])
+                      myMask = (np.zeros_like(correlated)) 
 
-
-                    boxlist= []
-                    for c, center in enumerate(centers[0]):
-                        xs= []
-
-                        others = np.copy(centers[0])
-                        IS = np.argwhere(center)
-                        #print "IS", IS
-                        #print "center old", others
-                        otherCenters = np.delete(others, IS)
-                        #print "center new", otherCenters
-                        oC =otherCenters.reshape(3,2)
-                        for k, kenter in enumerate(oC):
-                          mybool = center[1] not in xs
-                          #distance = abs(kenter[1]-center[1])<3 and abs(kenter[0]-center[0])>2
-                          if mybool:# and distance:
-                            boxlist.append([int(np.floor(center[0])),int(np.floor(center[1]))])
-                            break
-                            xs.append(center[0])
-                            #print "final boxlist", boxlist
-                    myMask = (np.zeros_like(correlated)) 
-                    #print "myMask shape", np.shape(myMask)
-
-                    for b, box in enumerate(boxlist):
+                      for b, box in enumerate(boxlist):
                         thisBox = buildBox(box)
-                        #print 'box', thisBox.y1,thisBox.y2,thisBox.x1,thisBox.x2
                         myMask[thisBox.y1:thisBox.y2,thisBox.x1:thisBox.x2] = 1
 
-                    maskList.append((rotater(myMask,iteration)))
+                      maskList.append(myMask)
         myList  = np.sum(maskList, axis =0)
         return myList
         
@@ -158,6 +155,8 @@ def makeMask(threshold = 245, img = 'fusedCorrelated_Not_rotated_back30.png',ite
             #print "center old", others
             otherCenters = np.delete(others, IS)
             #print "center new", otherCenters
+            if len(otherCenters) ==7:
+              otherCenters =np.delete(otherCenters,0)
             oC =otherCenters.reshape(3,2)
             for k, kenter in enumerate(oC):
               mybool = center[1] not in xs
