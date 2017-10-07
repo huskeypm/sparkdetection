@@ -70,3 +70,113 @@ def find_centers(X, K):
         # Reevaluate centers
         mu = reevaluate_centers(oldmu, clusters)
     return(mu, clusters)
+
+
+
+
+
+def makeMask(threshold = 245, img = 'fusedCorrelated_Not_rotated_back30.png',iterater=False,iters=[]):
+    
+    if iterater:
+        cropper=[55,155,55,155]
+        Paint.correlateThresher(gray,gray2, threshold, cropper, iters)
+        maskList = []
+        for i, iteration in enumerate(iters):
+                    print "iter", iteration
+                    img = 'fusedCorrelated_{}.png'.format(iteration)
+                    correlated = it.ReadImg(img)
+                    #print 'correlated', np.shape(correlated)
+                    corr = np.copy(correlated.flatten())
+                    masker = (np.zeros_like(corr))
+                    #print 'masker', np.shape(masker)
+                    pts =np.argwhere(corr>threshold)
+                    masker[pts] = corr[pts]
+                    newmasker= np.reshape(masker,(100,100))
+                    it.myplot(newmasker)
+                    threshed = np.argwhere(correlated>threshold)
+                    centers = find_centers(X = threshed, K=3)
+
+
+
+                    boxlist= []
+                    for c, center in enumerate(centers[0]):
+                        xs= []
+
+                        others = np.copy(centers[0])
+                        IS = np.argwhere(center)
+                        #print "IS", IS
+                        #print "center old", others
+                        
+                        otherCenters = np.delete(others, IS)
+                        if len(otherCenters) ==7:
+			  otherCeners =np.delete(others,0)
+                        #print "center new", otherCenters
+                        oC =otherCenters.reshape(3,2)
+                        for k, kenter in enumerate(oC):
+                          mybool = center[1] not in xs
+                          #distance = abs(kenter[1]-center[1])<3 and abs(kenter[0]-center[0])>2
+                          if mybool:# and distance:
+                            boxlist.append([int(np.floor(center[0])),int(np.floor(center[1]))])
+                            break
+                            xs.append(center[0])
+                            #print "final boxlist", boxlist
+                    myMask = (np.zeros_like(correlated)) 
+                    #print "myMask shape", np.shape(myMask)
+
+                    for b, box in enumerate(boxlist):
+                        thisBox = buildBox(box)
+                        #print 'box', thisBox.y1,thisBox.y2,thisBox.x1,thisBox.x2
+                        myMask[thisBox.y1:thisBox.y2,thisBox.x1:thisBox.x2] = 1
+
+                    maskList.append((rotater(myMask,iteration)))
+        myList  = np.sum(maskList, axis =0)
+        return myList
+        
+        
+        
+        
+
+    else:
+        correlated = it.ReadImg(img)
+        #print 'correlated', np.shape(correlated)
+        corr = np.copy(correlated.flatten())
+        masker = (np.zeros_like(corr))
+        #print 'masker', np.shape(masker)
+        pts =np.argwhere(corr>threshold)
+        masker[pts] = corr[pts]
+        newmasker= np.reshape(masker,(100,100))
+        it.myplot(newmasker)
+        threshed = np.argwhere(correlated>threshold)
+        centers = find_centers(X = threshed, K=4)
+
+
+
+        boxlist= []
+        for c, center in enumerate(centers[0]):
+            xs= []
+
+            others = np.copy(centers[0])
+            IS = np.argwhere(center)
+            #print "IS", IS
+            #print "center old", others
+            otherCenters = np.delete(others, IS)
+            #print "center new", otherCenters
+            if len(otherCenters) ==7:
+              otherCenters =np.delete(otherCenters,0)
+            oC =otherCenters.reshape(3,2)
+            for k, kenter in enumerate(oC):
+              mybool = center[1] not in xs
+              #distance = abs(kenter[1]-center[1])<3 and abs(kenter[0]-center[0])>2
+              if mybool:# and distance:
+                boxlist.append([int(np.floor(center[0])),int(np.floor(center[1]))])
+                break
+                xs.append(center[0])
+        #print "final boxlist", boxlist
+        myMask = (np.zeros_like(correlated)) 
+        #print "myMask shape", np.shape(myMask)
+
+        for b, box in enumerate(boxlist):
+            thisBox = buildBox(box)
+            #print 'box', thisBox.y1,thisBox.y2,thisBox.x1,thisBox.x2
+            myMask[thisBox.y1:thisBox.y2,thisBox.x1:thisBox.x2] = 1
+        return myMask

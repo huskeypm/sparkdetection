@@ -8,47 +8,67 @@ from scipy.misc import toimage
 from scipy.ndimage.filters import *
 import matchedFilter as mF
 import imutils
-from imtools import * 
+from imtools import *
 from matplotlib import cm
+def padWithZeros(array, padwidth, iaxis, kwargs):
+    array[:padwidth[0]] = 0
+    array[-padwidth[1]:]= 0
+    return array
+
+
+
 
 # Need to be careful when cropping image
-def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125],iters = [0,30,60,90], printer = True):
+def correlateThresher(myImg, myFilter1,  threshold = 190, iters = [0,30,60,90],  fused = True, printer = True):
     for i, val in enumerate(iters):
       clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
       cl1 = clahe99.apply(myImg)
       cv2.imwrite('clahe_99.jpg',cl1)
       adapt99 = ReadImg('clahe_99.jpg')
       tracker = np.copy(adapt99)
-      dst = imutils.rotate(tracker,(val))
-      dst1 = np.copy(dst)
+      #dst = imutils.rotate(tracker,(val))
+      #dst1 = np.copy(dst)
       
       #adding image check here
       #myplot(dst)
-
+      dims = np.shape(myFilter1)
+      diff = np.min(dims)
+      paddedFilter = np.lib.pad(myFilter1,diff,padWithZeros)
+      rotatedFilter = imutils.rotate(paddedFilter,-val)
+      rF = np.copy(rotatedFilter)
     
-      if printer:   
-        plt.figure()
-        myplot(tracker[cropper[0]:cropper[1],cropper[2]:cropper[3]])
-        plt.title("UNROTATED IMAGE")
-      hXtal = mF.matchedFilter(dst1,myFilter1)
-      toimage(imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('fusedCorrelated_{}.png'.format(val))
-      myplot(dst[cropper[0]:cropper[1],cropper[2]:cropper[3]])
-      myplot(hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]])
-      toimage(hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('fusedCorrelated_Not_rotated_back{}.png'.format(val))
+      #if printer:   
+        #plt.figure()
+        #myplot(tracker[cropper[0]:cropper[1],cropper[2]:cropper[3]])
+        #plt.title("UNROTATED IMAGE")
+      hXtal = mF.matchedFilter(tracker,rF)
+      if fused:
+        toimage(hXtal).save('fusedFilter_{}.png'.format(val))
+        toimage(hXtal,).save('fusedCorrelated_{}.png'.format(val))
+        #toimage(hXtal).save('fusedCorrelated_Not_rotated_back{}.png'.format(val))
+      else: 
+        toimage(hXtal).save('bulkFilter_{}.png'.format(val))
+        toimage(hXtal).save('bulkCorrelated_{}.png'.format(val))
+        #toimage(hXtal).save('bulkCorrelated_Not_rotated_back{}.png'.format(val))
 
 
 
-def paintME(myImg, myFilter1,  threshold = 190, cropper=[24,129,24,129],iters = [0,30,60,90]):
-  correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[24,129,24,129],iters = [0,30,60,90])
+
+def paintME(myImg, myFilter1,  threshold = 190, iters = [0,30,60,90], fused =True):
+  correlateThresher(myImg, myFilter1,  threshold, cropper,iters, fused, False)
   for i, val in enumerate(iters):
  
-    placer = ReadImg('fusedCorrelated_{}.png'.format(val))
-    
-    plt.figure() 
-    palette = cm.gray
-    palette.set_bad('m', 1.0)
-    
-    print "num maxes", np.shape(np.argwhere(placer>threshold))
+    if fused:
+      palette = cm.gray
+      palette.set_bad('m', 1.0)
+      placer = ReadImg('fusedCorrelated_{}.png'.format(val))
+    else:
+      palette = cm.gray
+      palette.set_bad('b', 1.0)
+      placer = ReadImg('bulkCorrelated_{}.png'.format(val))
+    plt.figure()
+
+    #print "num maxes", np.shape(np.argwhere(placer>threshold))
     Zm = np.ma.masked_where(placer > threshold, placer)
     fig, ax1 = plt.subplots()
     plt.axis("off")
