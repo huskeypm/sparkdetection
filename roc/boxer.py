@@ -106,12 +106,14 @@ def makeMask(threshold = 245, img = 'fusedCorrelated_Not_rotated_back30.png', it
                     worthThreshing =  np.shape(threshed)
                     print 'shape of number threshed over {}'.format(threshold), worthThreshing
 
-                    if np.max(worthThreshing) >40:
-                      K = worthThreshing[0]%5
-                      print 'shape of threshes', worthThreshing
-                      if K>=10:
+                    if np.max(worthThreshing) >50:
+                      K = worthThreshing[0]/20
+                      print 'shape of threshes', worthThreshing[0]
+                      if K>10:
                         K=10
                       X = threshed
+                      #print 'x', X
+                      #print 'k', K
                       centers = find_centers(X, K)
                       boxlist= []
                       for c, center in enumerate(centers[0]):
