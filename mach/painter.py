@@ -20,11 +20,17 @@ def padWithZeros(array, padwidth, iaxis, kwargs):
 
 # Need to be careful when cropping image
 def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125],iters = [0,30,60,90],  fused = True, printer = True):
-    for i, val in enumerate(iters):
+    # PKH 
+    correlated = []
+
+    if 1: 
+      # Ryan ?? equalized image?
       clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
       cl1 = clahe99.apply(myImg)
       cv2.imwrite('clahe_99.jpg',cl1)
       adapt99 = ReadImg('clahe_99.jpg')
+
+    for i, val in enumerate(iters):
       tracker = np.copy(adapt99)
       #dst = imutils.rotate(tracker,(val))
       #dst1 = np.copy(dst)
@@ -41,13 +47,25 @@ def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125
         #plt.figure()
         #myplot(tracker[cropper[0]:cropper[1],cropper[2]:cropper[3]])
         #plt.title("UNROTATED IMAGE")
+
+      # matched filtering 
       hXtal = mF.matchedFilter(tracker,rF)
+      
+      rotated = imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]
+      unrotated = hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]
+    
+      # store outputs
+      # Ryan: my general preference is to have one line per operation for clarity
       if fused:
-        toimage(imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('fusedCorrelated_{}.png'.format(val))
-        toimage(hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('fusedCorrelated_Not_rotated_back{}.png'.format(val))
+        tag = "fusedCorrelated"
       else: 
-        toimage(imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_{}.png'.format(val))
-        toimage(hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_Not_rotated_back{}.png'.format(val))
+        tag = "bulkCorrelated"
+      #  toimage(imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_{}.png'.format(val))
+      #  toimage(hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_Not_rotated_back{}.png'.format(val))
+
+      # save
+      toimage(rotated).save(tag+'_{}.png'.format(val))
+      toimage(unrotated).save(tag+'_Not_rotated_back{}.png'.format(val))
 
 
 
