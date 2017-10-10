@@ -23,20 +23,17 @@ def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125
     # PKH 
     correlated = []
 
-    if 1: 
-      # Ryan ?? equalized image?
-      clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
-      cl1 = clahe99.apply(myImg)
-      cv2.imwrite('clahe_99.jpg',cl1)
-      adapt99 = ReadImg('clahe_99.jpg')
+    # Ryan ?? equalized image?
+    clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
+    cl1 = clahe99.apply(myImg)
+    cv2.imwrite('clahe_99.jpg',cl1)
+    adapt99 = ReadImg('clahe_99.jpg')
 
     for i, val in enumerate(iters):
+      # ????????
       tracker = np.copy(adapt99)
-      #dst = imutils.rotate(tracker,(val))
-      #dst1 = np.copy(dst)
       
-      #adding image check here
-      #myplot(dst)
+      # pad/rotate 
       dims = np.shape(myFilter1)
       diff = np.min(dims)
       paddedFilter = np.lib.pad(myFilter1,diff,padWithZeros)
@@ -45,14 +42,17 @@ def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125
     
       #if printer:   
         #plt.figure()
-        #myplot(tracker[cropper[0]:cropper[1],cropper[2]:cropper[3]])
         #plt.title("UNROTATED IMAGE")
 
       # matched filtering 
       hXtal = mF.matchedFilter(tracker,rF)
       
+      # crop/rotate image 
       rotated = imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]
       unrotated = hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]
+
+      # store data 
+      correlated.append(rotated) 
     
       # store outputs
       # Ryan: my general preference is to have one line per operation for clarity
@@ -67,6 +67,8 @@ def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125
       toimage(rotated).save(tag+'_{}.png'.format(val))
       toimage(unrotated).save(tag+'_Not_rotated_back{}.png'.format(val))
 
+
+    return correlated
 
 
 
