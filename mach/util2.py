@@ -77,8 +77,17 @@ def buildBox(dims, filterType = 'fused'):
 
 
     
-def makeMask(threshold = 245, img = 'fusedCorrelated_Not_rotated_back30.png'):
-    correlated = it.ReadImg(img)
+# either load in data from file (imgName!=None) or pass in data (img!=None)
+def makeMask(threshold = 245, img=None,imgName=None):
+    # test if numpy array
+    if isinstance(img, (list, tuple, np.ndarray)): 
+      correlated = img
+    # test if string
+    elif isinstance(imgName, (str)):
+      correlated = it.ReadImg(imgName)
+    else:
+      raise RuntimeError("Need to pass in arg") 
+
     #print 'correlated', np.shape(correlated)
     corr = np.copy(correlated.flatten())
     masker = (np.zeros_like(corr))
