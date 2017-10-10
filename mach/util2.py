@@ -4,6 +4,7 @@ PKH
 """
 
 
+import matplotlib.pylab as plt
 import numpy as np
 import cv2
 import imtools as it 
@@ -80,7 +81,7 @@ def buildBox(dims, filterType = 'fused'):
 # either load in data from file (imgName!=None) or pass in data (img!=None)
 def makeMask(threshold = 245, 
              img=None,imgName=None,
-             imgDim = (100,100),
+             doKMeans = True,
              K = 4  # Ryan what is this parameter? 
              ):
     # test if numpy array
@@ -92,14 +93,25 @@ def makeMask(threshold = 245,
     else:
       raise RuntimeError("Need to pass in arg") 
 
+    #imgDim = (100,100),
+    imgDim = np.shape(correlated)
+
     #print 'correlated', np.shape(correlated)
     corr = np.copy(correlated.flatten())
     masker = (np.zeros_like(corr))
     #print 'masker', np.shape(masker)
     pts =np.argwhere(corr>threshold)
     masker[pts] = corr[pts]
+    #print np.shape(masker) 
     newmasker= np.reshape(masker,imgDim)            
-    it.myplot(newmasker)
+    #print np.shape(newmasker) 
+    #it.myplot(newmasker)
+    #plt.imshow(newmasker)
+
+    if doKMeans ==False:
+      return newmasker     
+
+    
     threshed = np.argwhere(correlated>threshold)
     centers = find_centers(X = threshed, K=K)
 

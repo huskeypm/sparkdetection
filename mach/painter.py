@@ -17,9 +17,11 @@ def padWithZeros(array, padwidth, iaxis, kwargs):
 
 
 
+class empty:pass
 
 # Need to be careful when cropping image
-def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125],iters = [0,30,60,90],  fused = True, printer = True):
+def correlateThresher(myImg, myFilter1,  cropper=[25,125,25,125],
+                      iters = [0,30,60,90],  fused = True, printer = True):
     # PKH 
     correlated = []
 
@@ -30,6 +32,7 @@ def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125
     adapt99 = ReadImg('clahe_99.jpg')
 
     for i, val in enumerate(iters):
+      result = empty()
       # ????????
       tracker = np.copy(adapt99)
       
@@ -40,19 +43,41 @@ def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125
       rotatedFilter = imutils.rotate(paddedFilter,-val)
       rF = np.copy(rotatedFilter)
     
-      #if printer:   
-        #plt.figure()
-        #plt.title("UNROTATED IMAGE")
 
       # matched filtering 
       hXtal = mF.matchedFilter(tracker,rF)
       
       # crop/rotate image 
-      rotated = imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]
-      unrotated = hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]
+      # if filter is being rotated, I don't think we need to rotted the correlated image 
+      #rotated = imutils.rotate(hXtal,(-val-1)) # [cropper[0]:cropper[1],cropper[2]:cropper[3]]
+      unrotated = hXtal # [cropper[0]:cropper[1],cropper[2]:cropper[3]]
+
+      # spot check results
+      hit = np.max(unrotated) 
+      hitLoc = np.argmax(unrotated) 
+      hitLoc =np.unravel_index(hitLoc,np.shape(unrotated))
+
+      # store
+
+      daTitle = "rot %f "%val + "hit %f "%hit + str(hitLoc)
+      print daTitle
+      if printer:   
+        plt.figure()
+        plt.subplot(1,3,1)
+        plt.title(daTitle)
+        plt.imshow(tracker,cmap="gray")   
+        plt.subplot(1,3,2)
+        plt.imshow(rF,cmap="gray")   
+        
+        plt.subplot(1,3,3)
+        plt.imshow(unrotated)   
+
 
       # store data 
-      correlated.append(rotated) 
+      result.corr = unrotated 
+      result.hit = hit
+      result.hitLoc = hitLoc
+      correlated.append(result) 
     
       # store outputs
       # Ryan: my general preference is to have one line per operation for clarity
@@ -64,7 +89,7 @@ def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125
       #  toimage(hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_Not_rotated_back{}.png'.format(val))
 
       # save
-      toimage(rotated).save(tag+'_{}.png'.format(val))
+      #toimage(rotated).save(tag+'_{}.png'.format(val))
       toimage(unrotated).save(tag+'_Not_rotated_back{}.png'.format(val))
 
 
@@ -72,7 +97,8 @@ def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125
 
 import util 
 import util2
-def StackHits(correlated,threshold,iters):
+def StackHits(correlated,threshold,iters,
+              display=False,rescaleCorr=False,doKMeans=True):
     maskList = []
 
     for i, iteration in enumerate(iters):
@@ -85,12 +111,34 @@ def StackHits(correlated,threshold,iters):
         #daMask = util2.makeMask(threshold,imgName=imgName)
 
         print "WARNING: please dig into why find_centers fails from time to time (or look into more robust clustering routine)"
-        img =  util.renorm(correlated[i])
-        daMask = util2.makeMask(threshold,img = img)
-        maskList.append((util2.rotater(daMask,iteration)))
+        # Ryan - I don't think this renormalization is appropriate
+        # as it will artificially inflate 'bad' correlation hits
+        corr_i = correlated[i].corr           
+        if rescaleCorr:
+           img =  util.renorm(corr_i)
+        else: 
+           img=corr_i
+        #print img
+
+        # routine for identifying 'unique' hits
+        #performed on 'unrotated' images 
+        daMask = util2.makeMask(threshold,img = img,doKMeans=doKMeans)
+        if display:
+          plt.figure()
+          plt.subplot(1,2,1)
+          plt.imshow(img)            
+          plt.subplot(1,2,2)
+          plt.imshow(daMask)
+
+        # i don't think this should be rotated 
+        #maskList.append((util2.rotater(daMask,iteration)))
+        maskList.append(daMask)
     #print maskList
 
     myList  = np.sum(maskList, axis =0)
+    if display: 
+      plt.figure()
+      plt.imshow(myList)
     return myList
 
 
