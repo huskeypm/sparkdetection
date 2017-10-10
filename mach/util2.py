@@ -78,7 +78,11 @@ def buildBox(dims, filterType = 'fused'):
 
     
 # either load in data from file (imgName!=None) or pass in data (img!=None)
-def makeMask(threshold = 245, img=None,imgName=None):
+def makeMask(threshold = 245, 
+             img=None,imgName=None,
+             imgDim = (100,100),
+             K = 4  # Ryan what is this parameter? 
+             ):
     # test if numpy array
     if isinstance(img, (list, tuple, np.ndarray)): 
       correlated = img
@@ -94,10 +98,10 @@ def makeMask(threshold = 245, img=None,imgName=None):
     #print 'masker', np.shape(masker)
     pts =np.argwhere(corr>threshold)
     masker[pts] = corr[pts]
-    newmasker= np.reshape(masker,(100,100))
+    newmasker= np.reshape(masker,imgDim)            
     it.myplot(newmasker)
     threshed = np.argwhere(correlated>threshold)
-    centers = find_centers(X = threshed, K=4)
+    centers = find_centers(X = threshed, K=K)
 
 
 

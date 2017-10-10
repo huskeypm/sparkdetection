@@ -70,6 +70,31 @@ def correlateThresher(myImg, myFilter1,  threshold = 190, cropper=[25,125,25,125
 
     return correlated
 
+import util 
+import util2
+def StackHits(correlated,threshold,iters):
+    maskList = []
+
+    for i, iteration in enumerate(iters):
+        print "iter", iteration
+        #maskList.append(makeMask(threshold,'fusedCorrelated_Not_rotated_back{}.png'.format(iteration)))
+
+        # RYAN
+        #maskList.append((util2.rotater(util2.makeMask(threshold,imgName='fusedCorrelated_{}.png'.format(iteration)),iteration)))
+        #imgName='fusedCorrelated_{}.png'.format(iteration)
+        #daMask = util2.makeMask(threshold,imgName=imgName)
+
+        print "WARNING: please dig into why find_centers fails from time to time (or look into more robust clustering routine)"
+        img =  util.renorm(correlated[i])
+        daMask = util2.makeMask(threshold,img = img)
+        maskList.append((util2.rotater(daMask,iteration)))
+    #print maskList
+
+    myList  = np.sum(maskList, axis =0)
+    return myList
+
+
+
 
 
 def paintME(myImg, myFilter1,  threshold = 190, cropper=[24,129,24,129],iters = [0,30,60,90], fused =True):
