@@ -65,6 +65,7 @@ def TestFilter(
     return R,daMax
 
 # renormalizes images to exist from 0-255
+# rescale/renomalize image 
 def renorm(img,scale=255):
     img = img-np.min(img)
     img/= np.max(img)

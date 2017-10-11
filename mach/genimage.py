@@ -2,6 +2,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import numpy as np 
 from matplotlib.figure import Figure
 import hexagon
+import util 
 # has annoying padding, but screw it 
 def GenerateImageFromScatter(scatterData,nxPix=(512),size=(10)):
     # if we want nxPix in the x and y directions, we need to create a figure with size w = nxPix/dpi
@@ -60,10 +61,13 @@ def GenLattice(mode="perfect", angle=0):
   # white pts on blk bg
   data = np.max(data) - data
   # normalize/rescale
-  data = data - np.min(data)
-  data /= np.max(data)  
+  #data = data - np.min(data)
+  #data /= np.max(data)  
+  # PKH 
+  rscl = util.renorm(data,scale=1.)
     
-  return  data    
+  return  rscl    
+
 
 import cv2
 # blurs and adds poisson noise 

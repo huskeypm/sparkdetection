@@ -4,3 +4,21 @@ Input data are on /net/share/shared/data/hafnium
 
 
 MACH.ipynb has validation routines written inside 
+
+
+
+Doing extensive refactoring
+searching for changes
+abort: push creates new remote branches: PKH!
+(use 'hg push --new-branch' to create new remote branches)
+pmke226@kafka:mach/$ hg push --new-branch
+pushing to ssh://hg@bitbucket.org/huskeypm/sparkdetection
+searching for changes
+remote: adding changesets
+remote: adding manifests
+remote: adding file changes
+remote: added 1 changesets with 5 changes to 5 files
+remote: 
+remote: Create pull request for PKH:
+remote:   https://bitbucket.org/huskeypm/sparkdetection/pull-requests/new?source=PKH&t=1
+remote: 
