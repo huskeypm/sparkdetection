@@ -59,18 +59,20 @@ def correlateThresher(myImg, myFilter1,  cropper=[25,125,25,125],
 
       # store
 
-      daTitle = "rot %f "%val + "hit %f "%hit + str(hitLoc)
+      #daTitle = "rot %f "%val + "hit %f "%hit + str(hitLoc)
+      daTitle = "rot %4.1f "%val + "hit %4.1f "%hit 
       print daTitle
       if printer:   
         plt.figure()
         plt.subplot(1,3,1)
-        plt.title(daTitle)
         plt.imshow(tracker,cmap="gray")   
         plt.subplot(1,3,2)
+        plt.title(daTitle)
         plt.imshow(rF,cmap="gray")   
         
         plt.subplot(1,3,3)
         plt.imshow(unrotated)   
+        plt.tight_layout()
 
 
       # store data 
@@ -102,7 +104,7 @@ def StackHits(correlated,threshold,iters,
     maskList = []
 
     for i, iteration in enumerate(iters):
-        print "iter", iteration
+        #print "iter", iteration
         #maskList.append(makeMask(threshold,'fusedCorrelated_Not_rotated_back{}.png'.format(iteration)))
 
         # RYAN
@@ -110,7 +112,6 @@ def StackHits(correlated,threshold,iters,
         #imgName='fusedCorrelated_{}.png'.format(iteration)
         #daMask = util2.makeMask(threshold,imgName=imgName)
 
-        print "WARNING: please dig into why find_centers fails from time to time (or look into more robust clustering routine)"
         # Ryan - I don't think this renormalization is appropriate
         # as it will artificially inflate 'bad' correlation hits
         corr_i = correlated[i].corr           
