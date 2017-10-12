@@ -1,6 +1,10 @@
 """
 Finds all hits for rotated filter 
 """
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
 class empty:pass
 
 import cv2
@@ -118,3 +122,78 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkT
                  outName=outName)
 
     return fusedPoreResult, bulkPoreResult 
+
+
+def TestTrueData():
+  root = "/net/share/shared/papers/nanoporous/images/"
+  img1 = '/home/AD/srbl226/spark/sparkdetection/roc/clahe_Best.jpg'
+  img2 = root+"full.png"
+  dummy = TestFilters(
+    img1, # testData
+    root+'fusedBase.png',         # fusedfilter Name
+    root+'bulkCellTEM.png',        # bulkFilter name
+    #subsection=[200,400,200,500],   # subsection of testData
+    subsection=[200,400,200,500],   # subsection of testData
+    fusedThresh = 6.,  
+    bulkThresh = 6., 
+    outName = "filters_on_pristine.png",
+    display=False   
+  )  
+  
+  
+  
+  
+  
+  
+  
+#
+# Message printed when program run without arguments 
+#
+def helpmsg():
+  scriptName= sys.argv[0]
+  msg="""
+Purpose: 
+ 
+Usage:
+"""
+  msg+="  %s -validation" % (scriptName)
+  msg+="""
+  
+ 
+Notes:
+
+"""
+  return msg
+
+#
+# MAIN routine executed when launching this script from command line 
+#
+if __name__ == "__main__":
+  import sys
+  msg = helpmsg()
+  remap = "none"
+
+  if len(sys.argv) < 2:
+      raise RuntimeError(msg)
+
+  #fileIn= sys.argv[1]
+  #if(len(sys.argv)==3):
+  #  1
+  #  #print "arg"
+
+  # Loops over each argument in the command line 
+  for i,arg in enumerate(sys.argv):
+    # calls 'doit' with the next argument following the argument '-validation'
+    if(arg=="-validation"):
+      #arg1=sys.argv[i+1] 
+      TestTrueData() 
+      quit()
+
+
+
+
+
+
+  raise RuntimeError("Arguments not understood")
+
+
