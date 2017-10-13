@@ -7,14 +7,18 @@ import numpy as np
 def matchedFilter(
   dimg, # imgs wherein signal (filter) is hypothesized to exist
   daFilter,# signal 
-  parsevals=False
+  parsevals=False,
+  demean=True
   ):
   # placeholder for 'noise' component (will refine later)
   fsC = np.ones(np.shape(dimg))
   
   ## prepare img
   # demean/shift img
-  sdimg = fftp.fftshift(dimg - np.mean(dimg))
+  if demean:
+    sdimg = fftp.fftshift(dimg - np.mean(dimg))
+  else:
+    sdimg = fftp.fftshift(dimg)
   # take FFT 
   fsdimg = fftp.fft2(sdimg)
 
@@ -31,7 +35,10 @@ def matchedFilter(
 
   ## signal
   # shift,demean filter
-  sfilter = fftp.fftshift(f- np.mean(f))
+  if demean:
+    sfilter = fftp.fftshift(f- np.mean(f))
+  else:
+    sfilter = fftp.fftshift(f)
   # take FFT
   fsfilter= fftp.fft2(sfilter)
 
