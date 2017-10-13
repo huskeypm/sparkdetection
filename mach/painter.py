@@ -21,15 +21,17 @@ class empty:pass
 
 # Need to be careful when cropping image
 def correlateThresher(myImg, myFilter1,  cropper=[25,125,25,125],
-                      iters = [0,30,60,90],  fused = True, printer = True):
+                      iters = [0,30,60,90],  fused = True, printer = True,
+                      sigma_n=1.):
     # PKH 
     correlated = []
 
     # Ryan ?? equalized image?
     clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
     cl1 = clahe99.apply(myImg)
-    cv2.imwrite('clahe_99.jpg',cl1)
-    adapt99 = ReadImg('clahe_99.jpg')
+    #cv2.imwrite('clahe_99.jpg',cl1)
+    #adapt99 = ReadImg('clahe_99.jpg')
+    adapt99 = cl1
 
     for i, val in enumerate(iters):
       result = empty()
@@ -77,6 +79,9 @@ def correlateThresher(myImg, myFilter1,  cropper=[25,125,25,125],
 
       # store data 
       result.corr = unrotated 
+
+      # 
+      result.snr = CalcSNR(result.corr,sigma_n) 
       result.hit = hit
       result.hitLoc = hitLoc
       correlated.append(result) 
@@ -96,6 +101,9 @@ def correlateThresher(myImg, myFilter1,  cropper=[25,125,25,125],
 
 
     return correlated
+
+def CalcSNR(signalResponse,sigma_n=1):
+  return signalResponse/sigma_n
 
 import util 
 import util2

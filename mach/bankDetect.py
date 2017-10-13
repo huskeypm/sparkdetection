@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pylab as plt 
 
 
-def DetectFilter(dataSet,mf,threshold,iters,display=False):
+def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.):
   # store
   result = empty()
   result.threshold = threshold
@@ -21,13 +21,23 @@ def DetectFilter(dataSet,mf,threshold,iters,display=False):
     
   # do correlations across all iter
   result.correlated = Paint.correlateThresher(
-     dataSet,result.mf, result.threshold, iters=iters,fused=True,printer=display)
+     dataSet,result.mf, result.threshold, iters=iters,fused=True,printer=display,sigma_n=sigma_n)
+
+  # 
+  snrs = [] 
+  for i, resulti in enumerate(result.correlated):
+    maxSNR = np.max( resulti.snr) 
+    snrs.append( maxSNR )              
+  result.snrs = np.array( snrs)
+  result.iters = iters 
+  print result.snrs
+  print result.iters 
   
   # stack hits to form 'total field' of hits
   result.stackedHits = Paint.StackHits(
     result.correlated,result.threshold,iters,doKMeans=False, display=False)#,display=display)
     
-  return result 
+  return result
 
 
 def GetHits(aboveThresholdPoints):
@@ -95,6 +105,7 @@ def colorHits(rawOrig,red=None,green=None,outName=None):
 def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkThresh=50,
                 subsection=None,
                 display=False,
+                sigma_n = 1., 
                 outName="test.png"):
 
     iters = [0,10,20,30,40,50,60,70,80,90]  
@@ -115,9 +126,9 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkT
     #unitBulk = fusedReal[305:327,318:358]
 
     print "fused"
-    fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,iters,display=display)
+    fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,iters,display=display,sigma_n=sigma_n)
     print "bulk"
-    bulkPoreResult = DetectFilter(testData,bulkFilter,bulkThresh,iters,display=display)
+    bulkPoreResult = DetectFilter(testData,bulkFilter,bulkThresh,iters,display=display,sigma_n=sigma_n)
     colorHits(testData,red=bulkPoreResult.stackedHits,green=fusedPoreResult.stackedHits,
                  outName=outName)
 
