@@ -13,24 +13,18 @@ import numpy as np
 import matplotlib.pylab as plt 
 
 
-def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,mode=None):
+def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,filterMode=None):
   # store
   result = empty()
   result.threshold = threshold
   result.mf= mf
 
-  if mode=="fused":
-    fused = True
-  elif mode=="bulk":
-    fused = False
-  else:
-    raise RuntimeError("mode unkwnoen") 
-    
   # do correlations across all iter
   result.correlated = Paint.correlateThresher(
-     dataSet,result.mf, threshold = result.threshold, iters=iters,fused=fused,
+     dataSet,result.mf, threshold = result.threshold, iters=iters,
      printer=display,sigma_n=sigma_n,
-     label=mode)
+     filterMode=filterMode,
+     label=label)
 
   # 
   snrs = [] 
@@ -39,8 +33,6 @@ def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,mode=None):
     snrs.append( maxSNR )              
   result.snrs = np.array( snrs)
   result.iters = iters 
-  print result.snrs
-  print result.iters 
   
   # stack hits to form 'total field' of hits
   result.stackedHits = Paint.StackHits(
@@ -82,7 +74,7 @@ def ColorChannel(Img,stackedHits,chIdx=0):
 
 # red - entries where hits are to be colored (same size as rawOrig)
 # will label in rawOrig detects in the 'red' channel as red, etc 
-def colorHits(rawOrig,red=None,green=None,outName=None):
+def colorHits(rawOrig,red=None,green=None,outName=None,label=""):
   dims = np.shape(rawOrig)  
   
   # make RGB version of data   
@@ -101,10 +93,13 @@ def colorHits(rawOrig,red=None,green=None,outName=None):
     
   plt.figure()  
   plt.subplot(1,2,1)
+  plt.title("Raw data (%s)"%label)
   plt.imshow(rawOrig,cmap='gray')
   plt.subplot(1,2,2)
+  plt.title("Marked") 
   plt.imshow(Img)  
   if outName!=None:
+    plt.tight_layout()
     plt.gcf().savefig(outName,dpi=300)
     
 
@@ -116,7 +111,7 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkT
                 display=False,
                 sigma_n = 1., 
                 iters = [0,10,20,30,40,50,60,70,80,90], 
-                outName="test.png"):
+                label="test"):       
 
     
     # load data against which filters are tested
@@ -135,11 +130,12 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkT
     #unitBulk = fusedReal[305:327,318:358]
 
     fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,
-                                   iters,display=display,sigma_n=sigma_n,mode="fused")
+                                   iters,display=display,sigma_n=sigma_n,filterMode="fused",label=label)
     bulkPoreResult = DetectFilter(testData,bulkFilter,bulkThresh,
-                                  iters,display=display,sigma_n=sigma_n,mode="bulk")
+                                  iters,display=display,sigma_n=sigma_n,filterMode="bulk",label=label)
     colorHits(testData,red=bulkPoreResult.stackedHits,green=fusedPoreResult.stackedHits,
-                 outName=outName)
+                 label=label,
+                 outName=label +".png")
 
     return fusedPoreResult, bulkPoreResult 
 

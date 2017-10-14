@@ -31,7 +31,7 @@ def PadRotate(myFilter1,val):
 
 # Need to be careful when cropping image
 def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
-                      iters = [0,30,60,90],  fused = True, printer = True, label=None,
+                      iters = [0,30,60,90],  printer = True, filterMode=None,label=None,
                       sigma_n=1.,threshold=None):
     # PKH 
     correlated = []
@@ -100,17 +100,20 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
 
       # write
       if 1: 
-        if fused:
+        if filterMode=="fused":
           tag = "fused"
         else: 
           tag = "bulk"
-      print label,"sdfsdf"
       if label!=None:
+        plt.figure()
         plt.subplot(1,2,1)
+        plt.title("Rotated filter") 
         plt.imshow(rF,cmap='gray')
         plt.subplot(1,2,2)
+        plt.title("Correlation plane") 
         plt.imshow(unrotated) 
-        plt.gcf().savefig(label+"_"+tag+'_{}'.format(val),dpi=100)
+        plt.tight_layout()
+        plt.gcf().savefig(label+"_"+tag+'_{}'.format(val),dpi=300)
      
 
 
