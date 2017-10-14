@@ -113,7 +113,7 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
         plt.title("Correlation plane") 
         plt.imshow(unrotated) 
         plt.tight_layout()
-        plt.gcf().savefig(label+"_"+tag+'_{}'.format(val),dpi=300)
+        plt.gcf().savefig(label+"_"+tag+'_{}.png'.format(val),dpi=300)
      
 
 
@@ -215,3 +215,23 @@ def paintME(myImg, myFilter1,  threshold = 190, cropper=[24,129,24,129],iters = 
     plt.axis('equal')
     
                 
+
+# Basically just finds a 'unit cell' sized area around each detection 
+# for the purpose of interpolating the data 
+from scipy import signal
+def doLabel(result,dx=10):
+    img =result.stackedHits > 0
+    kernel = np.ones((dx,dx),np.float32)/(dx*dx)
+    
+    filtered = signal.convolve2d(img, kernel, mode='same') / np.sum(kernel)
+
+    plt.subplot(1,3,1)
+    plt.imshow(img)
+    plt.subplot(1,3,2)
+    plt.imshow(filtered)
+    plt.subplot(1,3,3)
+    labeled = filtered > 0
+    plt.imshow(labeled)
+    plt.tight_layout()
+    
+    return labeled

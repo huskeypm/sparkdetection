@@ -14,6 +14,7 @@ def TestFused():
   testCase.name = rawData
   testCase.subsection=[340,440,400,500]
   daImg = cv2.imread(testCase.name)
+  daImg = cv2.cvtColor(daImg, cv2.COLOR_BGR2GRAY)
   raw = daImg[testCase.subsection[0]:testCase.subsection[1],
               testCase.subsection[2]:testCase.subsection[3]]
   #imshow(cut)
