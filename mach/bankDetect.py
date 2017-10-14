@@ -13,15 +13,24 @@ import numpy as np
 import matplotlib.pylab as plt 
 
 
-def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.):
+def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,mode=None):
   # store
   result = empty()
   result.threshold = threshold
   result.mf= mf
+
+  if mode=="fused":
+    fused = True
+  elif mode=="bulk":
+    fused = False
+  else:
+    raise RuntimeError("mode unkwnoen") 
     
   # do correlations across all iter
   result.correlated = Paint.correlateThresher(
-     dataSet,result.mf, result.threshold, iters=iters,fused=True,printer=display,sigma_n=sigma_n)
+     dataSet,result.mf, threshold = result.threshold, iters=iters,fused=fused,
+     printer=display,sigma_n=sigma_n,
+     label=mode)
 
   # 
   snrs = [] 
@@ -106,9 +115,9 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkT
                 subsection=None,
                 display=False,
                 sigma_n = 1., 
+                iters = [0,10,20,30,40,50,60,70,80,90], 
                 outName="test.png"):
 
-    iters = [0,10,20,30,40,50,60,70,80,90]  
     
     # load data against which filters are tested
     testData = cv2.imread(testDataName)
@@ -125,10 +134,10 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkT
     bulkFilter = cv2.cvtColor(bulkFilter, cv2.COLOR_BGR2GRAY)
     #unitBulk = fusedReal[305:327,318:358]
 
-    print "fused"
-    fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,iters,display=display,sigma_n=sigma_n)
-    print "bulk"
-    bulkPoreResult = DetectFilter(testData,bulkFilter,bulkThresh,iters,display=display,sigma_n=sigma_n)
+    fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,
+                                   iters,display=display,sigma_n=sigma_n,mode="fused")
+    bulkPoreResult = DetectFilter(testData,bulkFilter,bulkThresh,
+                                  iters,display=display,sigma_n=sigma_n,mode="bulk")
     colorHits(testData,red=bulkPoreResult.stackedHits,green=fusedPoreResult.stackedHits,
                  outName=outName)
 

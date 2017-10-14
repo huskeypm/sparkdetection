@@ -19,10 +19,20 @@ def padWithZeros(array, padwidth, iaxis, kwargs):
 
 class empty:pass
 
+
+def PadRotate(myFilter1,val):
+  dims = np.shape(myFilter1)
+  diff = np.min(dims)
+  paddedFilter = np.lib.pad(myFilter1,diff,padWithZeros)
+  rotatedFilter = imutils.rotate(paddedFilter,-val)
+  rF = np.copy(rotatedFilter)
+
+  return rF
+
 # Need to be careful when cropping image
-def correlateThresher(myImg, myFilter1,  cropper=[25,125,25,125],
-                      iters = [0,30,60,90],  fused = True, printer = True,
-                      sigma_n=1.):
+def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
+                      iters = [0,30,60,90],  fused = True, printer = True, label=None,
+                      sigma_n=1.,threshold=None):
     # PKH 
     correlated = []
 
@@ -39,15 +49,16 @@ def correlateThresher(myImg, myFilter1,  cropper=[25,125,25,125],
       tracker = np.copy(adapt99)
       
       # pad/rotate 
-      dims = np.shape(myFilter1)
-      diff = np.min(dims)
-      paddedFilter = np.lib.pad(myFilter1,diff,padWithZeros)
-      rotatedFilter = imutils.rotate(paddedFilter,-val)
-      rF = np.copy(rotatedFilter)
-    
+      rF = PadRotate(myFilter1,val)  
 
       # matched filtering 
-      hXtal = mF.matchedFilter(tracker,rF)
+      hXtal = mF.matchedFilter(tracker,rF,demean=False)
+
+      # noise penalty 
+      daMax = 255
+      hInv = daMax - myFilter1
+      rFi = PadRotate(hInv,val)
+      yInv  = mF.matchedFilter(tracker,rFi,demean=False)   
       
       # crop/rotate image 
       # if filter is being rotated, I don't think we need to rotted the correlated image 
@@ -60,25 +71,52 @@ def correlateThresher(myImg, myFilter1,  cropper=[25,125,25,125],
       hitLoc =np.unravel_index(hitLoc,np.shape(unrotated))
 
       # store
+      print np.min(yInv), np.max(yInv)
+      scaled = unrotated/yInv
 
       #daTitle = "rot %f "%val + "hit %f "%hit + str(hitLoc)
       daTitle = "rot %4.1f "%val + "hit %4.1f "%hit 
       print daTitle
       if printer:   
-        plt.figure()
-        plt.subplot(1,3,1)
-        plt.imshow(tracker,cmap="gray")   
-        plt.subplot(1,3,2)
+        plt.figure(figsize=(16,5))
+        plt.subplot(1,5,1)
+        plt.imshow(tracker,cmap='gray')          
+        plt.subplot(1,5,2)
         plt.title(daTitle)
         plt.imshow(rF,cmap="gray")   
+        #plt.imshow(rFi,cmap="gray")   
         
-        plt.subplot(1,3,3)
+        plt.subplot(1,5,3)
         plt.imshow(unrotated)   
+
+        if threshold!=None:
+          plt.subplot(1,5,4)
+          plt.imshow(unrotated>threshold)   
+          plt.imshow(yInv)                  
+          plt.subplot(1,5,5)
+          plt.imshow(scaled)                
+          plt.colorbar()
         plt.tight_layout()
+
+      # write
+      if 1: 
+        if fused:
+          tag = "fused"
+        else: 
+          tag = "bulk"
+      print label,"sdfsdf"
+      if label!=None:
+        plt.subplot(1,2,1)
+        plt.imshow(rF,cmap='gray')
+        plt.subplot(1,2,2)
+        plt.imshow(unrotated) 
+        plt.gcf().savefig(label+"_"+tag+'_{}'.format(val),dpi=100)
+     
 
 
       # store data 
       result.corr = unrotated 
+      #result.corr = scaled    
 
       # 
       result.snr = CalcSNR(result.corr,sigma_n) 
@@ -88,10 +126,6 @@ def correlateThresher(myImg, myFilter1,  cropper=[25,125,25,125],
     
       # store outputs
       # Ryan: my general preference is to have one line per operation for clarity
-      if fused:
-        tag = "fusedCorrelated"
-      else: 
-        tag = "bulkCorrelated"
       #  toimage(imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_{}.png'.format(val))
       #  toimage(hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_Not_rotated_back{}.png'.format(val))
 
