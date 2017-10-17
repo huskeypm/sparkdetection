@@ -15,7 +15,7 @@ sigma_n = 22. # based on Ryan's data
 fusedThresh = 1000.
 bulkThresh = 1050. 
 
-def Score(positiveHits,negativeHits,truthName):
+def Score(positiveHits,negativeHits,truthName,display=True):
     # read in 'truth image' 
     truthMarked = cv2.imread(truthName)
     truthMarked=cv2.cvtColor(truthMarked, cv2.COLOR_BGR2GRAY)
@@ -24,32 +24,32 @@ def Score(positiveHits,negativeHits,truthName):
 
     # positive hits 
     positiveMasked = np.array(positiveHits > 0, dtype=np.float)
-    plt.figure()    
-    plt.subplot(1,3,1)
-    plt.imshow(positiveMasked)
-    plt.subplot(1,3,2)
-    plt.imshow(truthMarked)
-    plt.subplot(1,3,3)
-    composite = 2.*truthMarked + positiveMasked
-    plt.imshow(composite)
+    if display:
+      plt.figure()    
+      plt.subplot(1,3,1)
+      plt.imshow(positiveMasked)
+      plt.subplot(1,3,2)
+      plt.imshow(truthMarked)
+      plt.subplot(1,3,3)
+      composite = 2.*truthMarked + positiveMasked
+      plt.imshow(composite)
     #plt.imsave("Test.png",composite)
-    positiveScore = truthMarked*positiveMasked
-    positiveScore = np.sum(positiveScore)/np.sum(truthMarked)
-    print positiveScore
+    positiveScoreImg = truthMarked*positiveMasked
+    positiveScore = np.sum(positiveScoreImg)/np.sum(truthMarked)
 
     # negative hits 
     negativeMasked = np.array(negativeHits > 0, dtype=np.float)
-    plt.figure()    
-    plt.subplot(1,3,1)
-    plt.imshow(negativeMasked)
-    plt.subplot(1,3,2)
-    plt.imshow(truthMarked)
-    plt.subplot(1,3,3)
-    composite = 2.*truthMarked + negativeMasked
-    plt.imshow(composite)
-    negativeScore = truthMarked*negativeMasked
-    negativeScore = np.sum(negativeScore)/np.sum(truthMarked)
-    print negativeScore
+    if display: 
+      plt.figure()    
+      plt.subplot(1,3,1)
+      plt.imshow(negativeMasked)
+      plt.subplot(1,3,2)
+      plt.imshow(truthMarked)
+      plt.subplot(1,3,3)
+      composite = 2.*truthMarked + negativeMasked
+      plt.imshow(composite)
+    negativeScoreImg = truthMarked*negativeMasked
+    negativeScore = np.sum(negativeScoreImg)/np.sum(truthMarked)
 
     return positiveScore, negativeScore
 
@@ -75,7 +75,7 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False):
       display=display
     )        
 
-    fusedPS, bulkNS= Score(fusedPoreResult.stackedHits,bulkPoreResult.stackedHits,"testimages/fusedMarked.png")
+    fusedPS, bulkNS= Score(fusedPoreResult.stackedHits,bulkPoreResult.stackedHits,"testimages/fusedMarked.png",display=display)
 
     ### Bulk pore
     testCase = empty()
@@ -100,16 +100,42 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False):
      )        
     
     
-    bulkPS, fusedNS = Score(bulkPoreResult.stackedHits,fusedPoreResult.stackedHits,"testimages/bulkMarked.png")   
+    bulkPS, fusedNS = Score(bulkPoreResult.stackedHits,fusedPoreResult.stackedHits,"testimages/bulkMarked.png",display=display)   
     
     ## 
     return fusedPS,bulkNS,bulkPS,fusedNS
 
+def AnalyzePerformanceData(df,tag='bulk'):
+
+    #plt.figure()
+    threshID=tag+'Thresh'
+    result = df.sort_values(by=[threshID], ascending=[1])
+
+    plt.title(threshID+" threshold")
+    plt.scatter(df[threshID], df[tag+'PS'],label=tag+"/positive",c='b')
+    plt.scatter(df[threshID], df[tag+'NS'],label=tag+"/negative",c='r')
+
+
+    fig, ax = plt.subplots()
+    ax.set_title("ROC")
+    ax.scatter(df[tag+'NS'],df[tag+'PS'])
+
+    i =  np.int(0.45*np.shape(result)[0])
+    numbers = np.arange( np.shape(result)[0])
+    numbers = numbers[::25]
+    #numbers = [i]
+    for i in numbers:
+        #print i
+        thresh= result[threshID].values[i]
+        ax.scatter(result[tag+'NS'].values[i],result[tag+'PS'].values[i],c="r")
+        loc = (result[tag+'NS'].values[i],0.1+result[tag+'PS'].values[i])
+        ax.annotate("%4.1f"%thresh, loc)
+
 import pandas as pd
 
 def Assess(
-  fusedThreshes = np.linspace(900,1300,3),
-  bulkThreshes = np.linspace(900,1300,3),
+  fusedThreshes = np.linspace(800,1100,10), 
+  bulkThreshes = np.linspace(800,1100,10), 
   sigma_n = 1.,
   display=False
   ):
@@ -134,10 +160,73 @@ def Assess(
 
   # store in hdf5 file
   hdf5Name = "optimizer.h5"
+  print "Printing " , hdf5Name 
   df.to_hdf(hdf5Name,'table', append=False)
   
   return df,hdf5Name     
   
   
+
+
+#!/usr/bin/env python
+import sys
+##################################
+#
+# Revisions
+#       10.08.10 inception
+#
+##################################
+
+
+#
+# Message printed when program run without arguments 
+#
+def helpmsg():
+  scriptName= sys.argv[0]
+  msg="""
+Purpose: 
+ 
+Usage:
+"""
+  msg+="  %s -optimize" % (scriptName)
+  msg+="""
+  
+ 
+Notes:
+
+"""
+  return msg
+
+#
+# MAIN routine executed when launching this script from command line 
+#
+if __name__ == "__main__":
+  import sys
+  msg = helpmsg()
+  remap = "none"
+
+  if len(sys.argv) < 2:
+      raise RuntimeError(msg)
+
+  #fileIn= sys.argv[1]
+  #if(len(sys.argv)==3):
+  #  1
+  #  #print "arg"
+
+  # Loops over each argument in the command line 
+  for i,arg in enumerate(sys.argv):
+    # calls 'doit' with the next argument following the argument '-validation'
+    if(arg=="-optimize"):
+      Assess()
+      quit()
+  
+
+
+
+
+
+  raise RuntimeError("Arguments not understood")
+
+
 
 
