@@ -23,7 +23,7 @@ def TestFused():
   
   fusedPoreResult, bulkPoreResult = bD.TestFilters(
     testCase.name, # testData
-    root+'fusedBase.png',         # fusedfilter Name
+    root+'fusedCellTEM.png',         # fusedfilter Name
     root+'bulkCellTEM.png',        # bulkFilter name
     subsection=testCase.subsection, #[200,400,200,500],   # subsection of testData
     fusedThresh = 1000,#.25,
@@ -92,7 +92,7 @@ def TestBulk():
   
   fusedPoreResult, bulkPoreResult = bD.TestFilters(
     testCase.name, # testData
-    root+'fusedBase.png',         # fusedfilter Name
+    root+'fusedCellTEM.png',         # fusedfilter Name
     root+'bulkCellTEM.png',        # bulkFilter name
     subsection=testCase.subsection, #[200,400,200,500],   # subsection of testData
     fusedThresh = 1000,#.25,

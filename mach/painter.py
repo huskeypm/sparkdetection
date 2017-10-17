@@ -104,7 +104,7 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
           tag = "fused"
         else: 
           tag = "bulk"
-      if label!=None:
+      if label!=None and printer:
         plt.figure()
         plt.subplot(1,2,1)
         plt.title("Rotated filter") 
