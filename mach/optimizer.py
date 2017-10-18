@@ -15,9 +15,13 @@ sigma_n = 22. # based on Ryan's data
 fusedThresh = 1000.
 bulkThresh = 1050. 
 
-def Score(positiveHits,negativeHits,truthName,display=True):
+def Score(positiveHits,negativeHits,
+          positiveTest,               
+          mode="default", # negative hits are assessed by 'negativeHits' within positive Hits region
+                          # negative hits are penalized throughout entire image 
+          display=True):
     # read in 'truth image' 
-    truthMarked = cv2.imread(truthName)
+    truthMarked = cv2.imread(positiveTest)
     truthMarked=cv2.cvtColor(truthMarked, cv2.COLOR_BGR2GRAY)
     truthMarked= np.array(truthMarked> 0, dtype=np.float)
     #imshow(fusedMarked)
@@ -49,11 +53,16 @@ def Score(positiveHits,negativeHits,truthName,display=True):
       composite = 2.*truthMarked + negativeMasked
       plt.imshow(composite)
     negativeScoreImg = truthMarked*negativeMasked
-    negativeScore = np.sum(negativeScoreImg)/np.sum(truthMarked)
+
+    if mode=="default": 
+      negativeScore = np.sum(negativeScoreImg)/np.sum(truthMarked)
+    elif mode=="nohits":
+      dims = np.shape(negativeScoreImg)
+      negativeScore = np.sum(negativeScoreImg)/np.float(np.prod(dims))
 
     return positiveScore, negativeScore
 
-def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False):
+def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFilterInv=False):
     ### Fused pore
     testCase = empty()
     testCase.name = root + 'clahe_Best.jpg'
@@ -62,7 +71,8 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False):
     #cut = daImg[testCase.subsection[0]:testCase.subsection[1],testCase.subsection[2]:testCase.subsection[3]]
     #imshow(cut)
 
-    fusedPoreResult, bulkPoreResult = bD.TestFilters(
+
+    fusedPore_fusedTEM, bulkPore_fusedTEM = bD.TestFilters(
       testCase.name, # testData
       root+'fusedCellTEM.png',         # fusedfilter Name
       root+'bulkCellTEM.png',        # bulkFilter name
@@ -72,10 +82,9 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False):
       #label = "opt.png",
       sigma_n = sigma_n,
       iters = [30],
+      useFilterInv=useFilterInv,
       display=display
     )        
-
-    fusedPS, bulkNS= Score(fusedPoreResult.stackedHits,bulkPoreResult.stackedHits,"testimages/fusedMarked.png",display=display)
 
     ### Bulk pore
     testCase = empty()
@@ -85,8 +94,7 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False):
     #cut = daImg[testCase.subsection[0]:testCase.subsection[1],testCase.subsection[2]:testCase.subsection[3]]
     #imshow(cut)
 
-    if 1: 
-      fusedPoreResult, bulkPoreResult = bD.TestFilters(
+    fusedPore_bulkTEM, bulkPore_bulkTEM = bD.TestFilters(
       testCase.name,
       root+'fusedCellTEM.png',         # fusedfilter Name
       root+'bulkCellTEM.png',        # bulkFilter name
@@ -96,16 +104,42 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False):
       label = "filters_on_pristine.png",
       sigma_n=sigma_n,
       iters = [5],
+      useFilterInv=useFilterInv,
       display=display
      )        
     
-    
-    bulkPS, fusedNS = Score(bulkPoreResult.stackedHits,fusedPoreResult.stackedHits,"testimages/bulkMarked.png",display=display)   
+    # This approach assess the number of hits of filter A overlapping with regions marked as 'A' in the test data
+    # negatives refer to hits of filter B on marked 'A' regions
+    if 0:   
+      fusedPS, bulkNS= Score(fusedPore_fusedTEM.stackedHits,bulkPore_fusedTEM.stackedHits,
+                           "testimages/fusedMarked.png", 
+                           mode="nohits",
+                           display=display)
+
+      bulkPS, fusedNS = Score(bulkPore_bulkTEM.stackedHits,fusedPore_bulkTEM.stackedHits,
+                            "testimages/bulkMarked.png",
+                            mode="nohits",
+                            display=display)   
+    # This approach assess filter A hits in marked regions of A, penalizes filter A hits in marked regions 
+    # of test set B 
+    if 1: 
+      fusedPS, fusedNS= Score(fusedPore_fusedTEM.stackedHits,fusedPore_bulkTEM.stackedHits,
+                           positiveTest="testimages/fusedMarked.png", 
+                           #negativeTest="testimages/bulkMarked.png", 
+                           mode="nohits",
+                           display=display)
+
+      bulkPS, bulkNS = Score(bulkPore_bulkTEM.stackedHits,bulkPore_fusedTEM.stackedHits,
+                            positiveTest="testimages/bulkMarked.png",
+                            #negativeTest="testimages/fusedMarked.png",
+                            mode="nohits",
+                            display=display)   
     
     ## 
+    print fusedThresh,bulkThresh,fusedPS,bulkNS,bulkPS,fusedNS
     return fusedPS,bulkNS,bulkPS,fusedNS
 
-def AnalyzePerformanceData(df,tag='bulk'):
+def AnalyzePerformanceData(df,tag='bulk',normalize=False):
 
     #plt.figure()
     threshID=tag+'Thresh'
@@ -113,7 +147,15 @@ def AnalyzePerformanceData(df,tag='bulk'):
 
     plt.title(threshID+" threshold")
     plt.scatter(df[threshID], df[tag+'PS'],label=tag+"/positive",c='b')
-    plt.scatter(df[threshID], df[tag+'NS'],label=tag+"/negative",c='r')
+    if normalize==False:
+      plt.scatter(df[threshID], df[tag+'NS'],label=tag+"/negative",c='r')
+    else:
+      maxNS = np.max( df[tag+'NS'].values ) 
+      plt.scatter(df[threshID], df[tag+'NS']/maxNS,label=tag+"/negative",c='r')
+      plt.ylabel("False normalized") 
+    plt.xlabel("threshold") 
+    plt.legend(loc=0)
+    
 
 
     fig, ax = plt.subplots()
@@ -130,6 +172,8 @@ def AnalyzePerformanceData(df,tag='bulk'):
         ax.scatter(result[tag+'NS'].values[i],result[tag+'PS'].values[i],c="r")
         loc = (result[tag+'NS'].values[i],0.1+result[tag+'PS'].values[i])
         ax.annotate("%4.1f"%thresh, loc)
+    ax.set_ylabel("True positive rate") 
+    ax.set_xlabel("False positive rate") 
 
 import pandas as pd
 
@@ -137,6 +181,7 @@ def Assess(
   fusedThreshes = np.linspace(800,1100,10), 
   bulkThreshes = np.linspace(800,1100,10), 
   sigma_n = 1.,
+  useFilterInv=False,
   display=False
   ):
   
@@ -146,7 +191,8 @@ def Assess(
   # iterate of thresholds
   for i,fusedThresh in enumerate(fusedThreshes):
     for j,bulkThresh in enumerate(bulkThreshes):
-      fusedPS,bulkNS,bulkPS,fusedNS = TestParams(fusedThresh=fusedThresh,bulkThresh=bulkThresh,sigma_n=sigma_n,display=display)
+      fusedPS,bulkNS,bulkPS,fusedNS = TestParams(fusedThresh=fusedThresh,bulkThresh=bulkThresh,
+                                                 sigma_n=sigma_n,useFilterInv=useFilterInv,display=display)
       raw_data =  {\
        'fusedThresh': fusedThresh,
        'bulkThresh': bulkThresh,
@@ -218,6 +264,18 @@ if __name__ == "__main__":
     # calls 'doit' with the next argument following the argument '-validation'
     if(arg=="-optimize"):
       Assess()
+      quit()
+    if(arg=="-optimize2"):
+    # coarse/fine
+      ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
+      bt = np.concatenate([np.linspace(0.4,0.55,7),np.linspace(0.55,0.65,15)   ])
+      Assess(
+        fusedThreshes = ft,
+        bulkThreshes = bt,
+        sigma_n = 1.,
+        useFilterInv=True,  
+        display=False
+      )
       quit()
   
 
