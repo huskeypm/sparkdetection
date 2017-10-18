@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pylab as plt 
 
 
-def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,filterMode=None):
+def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,filterMode=None,useFilterInv=False):
   # store
   result = empty()
   result.threshold = threshold
@@ -24,6 +24,7 @@ def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,
      dataSet,result.mf, threshold = result.threshold, iters=iters,
      printer=display,sigma_n=sigma_n,
      filterMode=filterMode,
+     useFilterInv=useFilterInv,
      label=label)
 
   # 
@@ -112,6 +113,7 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkT
                 display=False,
                 sigma_n = 1., 
                 iters = [0,10,20,30,40,50,60,70,80,90], 
+                useFilterInv=False,
                 label="test"):       
 
     
@@ -131,9 +133,9 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkT
     #unitBulk = fusedReal[305:327,318:358]
 
     fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,
-                                   iters,display=display,sigma_n=sigma_n,filterMode="fused",label=label)
+                                   iters,display=display,sigma_n=sigma_n,filterMode="fused",label=label,useFilterInv=useFilterInv)
     bulkPoreResult = DetectFilter(testData,bulkFilter,bulkThresh,
-                                  iters,display=display,sigma_n=sigma_n,filterMode="bulk",label=label)
+                                  iters,display=display,sigma_n=sigma_n,filterMode="bulk",label=label,useFilterInv=useFilterInv)
     colorHits(testData,
               red=bulkPoreResult.stackedHits,green=fusedPoreResult.stackedHits,
                label=label,
