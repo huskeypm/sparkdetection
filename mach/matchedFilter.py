@@ -50,7 +50,8 @@ def matchedFilter(
   h = np.real(h)
 
   ## apply parsevals
-  h *= 1/np.float(np.prod(np.shape(h)))
+  if parsevals:
+    h *= 1/np.float(np.prod(np.shape(h)))
   return h 
 
 
