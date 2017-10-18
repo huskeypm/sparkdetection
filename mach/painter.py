@@ -32,6 +32,7 @@ def PadRotate(myFilter1,val):
 # Need to be careful when cropping image
 def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
                       iters = [0,30,60,90],  printer = True, filterMode=None,label=None,
+                      useFilterInv=False,
                       sigma_n=1.,threshold=None):
     # PKH 
     correlated = []
@@ -71,12 +72,12 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
       hitLoc =np.unravel_index(hitLoc,np.shape(unrotated))
 
       # store
-      print np.min(yInv), np.max(yInv)
+      #print np.min(yInv), np.max(yInv)
       scaled = unrotated/yInv
 
       #daTitle = "rot %f "%val + "hit %f "%hit + str(hitLoc)
       daTitle = "rot %4.1f "%val + "hit %4.1f "%hit 
-      print daTitle
+      #print daTitle
       if printer:   
         plt.figure(figsize=(16,5))
         plt.subplot(1,5,1)
@@ -94,6 +95,7 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
           plt.imshow(unrotated>threshold)   
           plt.imshow(yInv)                  
           plt.subplot(1,5,5)
+          plt.title("Filter inv") 
           plt.imshow(scaled)                
           plt.colorbar()
         plt.tight_layout()
@@ -118,8 +120,10 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
 
 
       # store data 
-      result.corr = unrotated 
-      #result.corr = scaled    
+      if useFilterInv:
+        result.corr = scaled    
+      else:
+        result.corr = unrotated 
 
       # 
       result.snr = CalcSNR(result.corr,sigma_n) 
