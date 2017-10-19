@@ -72,6 +72,7 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFi
     #imshow(cut)
 
 
+    optimalAngleFused = 30
     fusedPore_fusedTEM, bulkPore_fusedTEM = bD.TestFilters(
       testCase.name, # testData
       root+'fusedCellTEM.png',         # fusedfilter Name
@@ -81,7 +82,7 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFi
       bulkThresh = bulkThresh, #.5,
       #label = "opt.png",
       sigma_n = sigma_n,
-      iters = [30],
+      iters = [optimalAngleFused],
       useFilterInv=useFilterInv,
       display=display
     )        
@@ -94,6 +95,7 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFi
     #cut = daImg[testCase.subsection[0]:testCase.subsection[1],testCase.subsection[2]:testCase.subsection[3]]
     #imshow(cut)
 
+    optimalAngleBulk = 5.
     fusedPore_bulkTEM, bulkPore_bulkTEM = bD.TestFilters(
       testCase.name,
       root+'fusedCellTEM.png',         # fusedfilter Name
@@ -103,7 +105,7 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFi
       bulkThresh = bulkThresh,#130.,
       label = "filters_on_pristine.png",
       sigma_n=sigma_n,
-      iters = [5],
+      iters = [optimalAngleBulk],
       useFilterInv=useFilterInv,
       display=display
      )        
@@ -139,47 +141,62 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFi
     print fusedThresh,bulkThresh,fusedPS,bulkNS,bulkPS,fusedNS
     return fusedPS,bulkNS,bulkPS,fusedNS
 
-def AnalyzePerformanceData(df,tag='bulk',normalize=False):
+def AnalyzePerformanceData(df,tag='bulk',normalize=False,roc=True):
 
     #plt.figure()
     threshID=tag+'Thresh'
     result = df.sort_values(by=[threshID], ascending=[1])
 
-    plt.title(threshID+" threshold")
-    plt.scatter(df[threshID], df[tag+'PS'],label=tag+"/positive",c='b')
+    if roc:
+      f,(ax1,ax2) = plt.subplots(1,2)     
+    else: 
+      f,(ax1) = plt.subplots(1,1)     
+    ax1.set_title(threshID+" threshold")
+    ax1.scatter(df[threshID], df[tag+'PS'],label=tag+"/positive",c='b')
     if normalize==False:
-      plt.scatter(df[threshID], df[tag+'NS'],label=tag+"/negative",c='r')
+      ax1.scatter(df[threshID], df[tag+'NS'],label=tag+"/negative",c='r')
     else:
       maxNS = np.max( df[tag+'NS'].values ) 
-      plt.scatter(df[threshID], df[tag+'NS']/maxNS,label=tag+"/negative",c='r')
-      plt.ylabel("False normalized") 
-    plt.xlabel("threshold") 
-    plt.legend(loc=0)
+      ax1.scatter(df[threshID], df[tag+'NS']/maxNS,label=tag+"/negative",c='r')
+      ax1.set_ylabel("False normalized") 
+    ax1.set_xlabel("threshold") 
+    ax1.set_ylim([0,1]) 
+    ax1.set_xlim(xmin=0)
+    ax1.legend(loc=0)
     
+    if roc==False:
+      return 
 
 
-    fig, ax = plt.subplots()
+    ax=ax2   
     ax.set_title("ROC")
     ax.scatter(df[tag+'NS'],df[tag+'PS'])
+    ax.set_ylim([0,1])
+    ax.set_xlim(xmin=0)
 
     i =  np.int(0.45*np.shape(result)[0])
     numbers = np.arange( np.shape(result)[0])
-    numbers = numbers[::25]
+    numbers = numbers[::50]
     #numbers = [i]
     for i in numbers:
         #print i
         thresh= result[threshID].values[i]
         ax.scatter(result[tag+'NS'].values[i],result[tag+'PS'].values[i],c="r")
-        loc = (result[tag+'NS'].values[i],0.1+result[tag+'PS'].values[i])
-        ax.annotate("%4.1f"%thresh, loc)
+        loc = (result[tag+'NS'].values[i],-0.1+result[tag+'PS'].values[i])
+        ax.annotate("%4.2f"%thresh, loc)
     ax.set_ylabel("True positive rate") 
     ax.set_xlabel("False positive rate") 
+    plt.tight_layout()
 
 import pandas as pd
 
+#
+# Assess output for single rotation 
+# 
 def Assess(
   fusedThreshes = np.linspace(800,1100,10), 
   bulkThreshes = np.linspace(800,1100,10), 
+  hdf5Name = "optimizer.h5",
   sigma_n = 1.,
   useFilterInv=False,
   display=False
@@ -205,7 +222,6 @@ def Assess(
       df=df.append(dfi)
 
   # store in hdf5 file
-  hdf5Name = "optimizer.h5"
   print "Printing " , hdf5Name 
   df.to_hdf(hdf5Name,'table', append=False)
   
@@ -267,13 +283,31 @@ if __name__ == "__main__":
       quit()
     if(arg=="-optimize2"):
     # coarse/fine
-      ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
-      bt = np.concatenate([np.linspace(0.4,0.55,7),np.linspace(0.55,0.65,15)   ])
+      #ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
+      #bt = np.concatenate([np.linspace(0.4,0.55,7),np.linspace(0.55,0.65,15)   ])
+      ft = np.linspace(0.01,0.02,9)
+      bt = np.linspace(0.01,0.02,9)
       Assess(
         fusedThreshes = ft,
         bulkThreshes = bt,
         sigma_n = 1.,
-        useFilterInv=True,  
+        useFilterInv=False, 
+        hdf5Name = "optimize2.h5",
+        display=False
+      )
+      quit()
+    if(arg=="-optimize3"):
+    # coarse/fine
+      #ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
+      #bt = np.concatenate([np.linspace(0.4,0.55,7),np.linspace(0.55,0.65,15)   ])
+      bt = np.linspace(0.005,0.013,9)
+      ft = np.linspace(0.003,0.015,9)
+      Assess(
+        fusedThreshes = ft,
+        bulkThreshes = bt,
+        sigma_n = 1.,
+        useFilterInv=True,   
+        hdf5Name = "optimizeinv.h5",
         display=False
       )
       quit()
@@ -284,7 +318,3 @@ if __name__ == "__main__":
 
 
   raise RuntimeError("Arguments not understood")
-
-
-
-

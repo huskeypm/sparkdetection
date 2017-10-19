@@ -75,7 +75,7 @@ def ColorChannel(Img,stackedHits,chIdx=0):
 
 # red - entries where hits are to be colored (same size as rawOrig)
 # will label in rawOrig detects in the 'red' channel as red, etc 
-def colorHits(rawOrig,red=None,green=None,outName=None,label="",display=True):
+def colorHits(rawOrig,red=None,green=None,outName=None,label=""):
   dims = np.shape(rawOrig)  
   
   # make RGB version of data   
@@ -92,25 +92,26 @@ def colorHits(rawOrig,red=None,green=None,outName=None,label="",display=True):
   if isinstance(green, (list, tuple, np.ndarray)): 
     ColorChannel(Img,green,chIdx=1)    
     
-  if display:
-    plt.figure()  
-    plt.subplot(1,2,1)
-    plt.title("Raw data (%s)"%label)
-    plt.imshow(rawOrig,cmap='gray')
-    plt.subplot(1,2,2)
-    plt.title("Marked") 
-    plt.imshow(Img)  
-    if outName!=None:
-      plt.tight_layout()
-      plt.gcf().savefig(outName,dpi=300)
+  plt.figure()  
+  plt.subplot(1,2,1)
+  plt.title("Raw data (%s)"%label)
+  plt.imshow(rawOrig,cmap='gray')
+  plt.subplot(1,2,2)
+  plt.title("Marked") 
+  plt.imshow(Img)  
+  if outName!=None:
+    plt.tight_layout()
+    plt.gcf().savefig(outName,dpi=300)
     
 
 
 # main engine 
 
-def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkThresh=50,
+def TestFilters(testDataName,fusedFilterName,bulkFilterName,
+                fusedThresh=60,bulkThresh=50,
                 subsection=None,
                 display=False,
+                colorHitsOutName=None,
                 sigma_n = 1., 
                 iters = [0,10,20,30,40,50,60,70,80,90], 
                 useFilterInv=False,
@@ -133,14 +134,19 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,fusedThresh=60,bulkT
     #unitBulk = fusedReal[305:327,318:358]
 
     fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,
-                                   iters,display=display,sigma_n=sigma_n,filterMode="fused",label=label,useFilterInv=useFilterInv)
-    bulkPoreResult = DetectFilter(testData,bulkFilter,bulkThresh,
-                                  iters,display=display,sigma_n=sigma_n,filterMode="bulk",label=label,useFilterInv=useFilterInv)
-    colorHits(testData,
-              red=bulkPoreResult.stackedHits,green=fusedPoreResult.stackedHits,
-               label=label,
-               display=display,
-               outName=label +".png")
+                                   iters,display=display,sigma_n=sigma_n,
+                                   filterMode="fused",label=label,
+                                   useFilterInv=useFilterInv)
+    bulkPoreResult = DetectFilter( testData,bulkFilter,bulkThresh,
+                                   iters,display=display,sigma_n=sigma_n,
+                                   filterMode="bulk",label=label,
+                                   useFilterInv=useFilterInv)
+    if colorHitsOutName!=None: 
+      colorHits(testData,
+              red=bulkPoreResult.stackedHits,
+              green=fusedPoreResult.stackedHits,
+              label=label,
+              outName=colorHitsOutName)                       
 
     return fusedPoreResult, bulkPoreResult 
 
@@ -157,7 +163,7 @@ def TestTrueData():
     subsection=[200,400,200,500],   # subsection of testData
     fusedThresh = 6.,  
     bulkThresh = 6., 
-    outName = "filters_on_pristine.png",
+    colorHitsoutName = "filters_on_pristine.png",
     display=False   
   )  
   
