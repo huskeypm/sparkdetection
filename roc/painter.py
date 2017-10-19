@@ -17,44 +17,181 @@ def padWithZeros(array, padwidth, iaxis, kwargs):
 
 
 
+class empty:pass
+
+
+def PadRotate(myFilter1,val):
+  dims = np.shape(myFilter1)
+  diff = np.min(dims)
+  paddedFilter = np.lib.pad(myFilter1,diff,padWithZeros)
+  rotatedFilter = imutils.rotate(paddedFilter,-val)
+  rF = np.copy(rotatedFilter)
+
+  return rF
 
 # Need to be careful when cropping image
-def correlateThresher(myImg, myFilter1,  threshold = 190, iters = [0,30,60,90],  fused = True, printer = True):
+def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
+                      iters = [0,30,60,90],  printer = True, filterMode=None,label=None,
+                      sigma_n=1.,threshold=None):
+    # PKH 
+    correlated = []
+
+    # Ryan ?? equalized image?
+    clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
+    cl1 = clahe99.apply(myImg)
+    #cv2.imwrite('clahe_99.jpg',cl1)
+    #adapt99 = ReadImg('clahe_99.jpg')
+    adapt99 = cl1
+
     for i, val in enumerate(iters):
-      clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
-      cl1 = clahe99.apply(myImg)
-      cv2.imwrite('clahe_99.jpg',cl1)
-      adapt99 = ReadImg('clahe_99.jpg')
+      result = empty()
+      # ????????
       tracker = np.copy(adapt99)
-      #dst = imutils.rotate(tracker,(val))
-      #dst1 = np.copy(dst)
       
-      #adding image check here
-      #myplot(dst)
-      dims = np.shape(myFilter1)
-      diff = np.min(dims)
-      paddedFilter = np.lib.pad(myFilter1,diff,padWithZeros)
-      rotatedFilter = imutils.rotate(paddedFilter,-val)
-      rF = np.copy(rotatedFilter)
+      # pad/rotate 
+      rF = PadRotate(myFilter1,val)  
+
+      # matched filtering 
+      hXtal = mF.matchedFilter(tracker,rF,demean=False)
+
+      # noise penalty 
+      daMax = 255
+      hInv = daMax - myFilter1
+      rFi = PadRotate(hInv,val)
+      yInv  = mF.matchedFilter(tracker,rFi,demean=False)   
+      
+      # crop/rotate image 
+      # if filter is being rotated, I don't think we need to rotted the correlated image 
+      #rotated = imutils.rotate(hXtal,(-val-1)) # [cropper[0]:cropper[1],cropper[2]:cropper[3]]
+      unrotated = hXtal # [cropper[0]:cropper[1],cropper[2]:cropper[3]]
+
+      # spot check results
+      hit = np.max(unrotated) 
+      hitLoc = np.argmax(unrotated) 
+      hitLoc =np.unravel_index(hitLoc,np.shape(unrotated))
+
+      # store
+      print np.min(yInv), np.max(yInv)
+      scaled = unrotated/yInv
+
+      #daTitle = "rot %f "%val + "hit %f "%hit + str(hitLoc)
+      daTitle = "rot %4.1f "%val + "hit %4.1f "%hit 
+      print daTitle
+      if printer:   
+        plt.figure(figsize=(16,5))
+        plt.subplot(1,5,1)
+        plt.imshow(tracker,cmap='gray')          
+        plt.subplot(1,5,2)
+        plt.title(daTitle)
+        plt.imshow(rF,cmap="gray")   
+        #plt.imshow(rFi,cmap="gray")   
+        
+        plt.subplot(1,5,3)
+        plt.imshow(unrotated)   
+
+        if threshold!=None:
+          plt.subplot(1,5,4)
+          plt.imshow(unrotated>threshold)   
+          plt.imshow(yInv)                  
+          plt.subplot(1,5,5)
+          plt.imshow(scaled)                
+          plt.colorbar()
+        plt.tight_layout()
+
+      # write
+      if 1: 
+        if filterMode=="fused":
+          tag = "fused"
+        else: 
+          tag = "bulk"
+      if label!=None:
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.title("Rotated filter") 
+        plt.imshow(rF,cmap='gray')
+        plt.subplot(1,2,2)
+        plt.title("Correlation plane") 
+        plt.imshow(unrotated) 
+        plt.tight_layout()
+        plt.gcf().savefig(label+"_"+tag+'_{}.png'.format(val),dpi=300)
+     
+
+
+      # store data 
+      result.corr = unrotated 
+      #result.corr = scaled    
+
+      # 
+      result.snr = CalcSNR(result.corr,sigma_n) 
+      result.hit = hit
+      result.hitLoc = hitLoc
+      correlated.append(result) 
     
-      #if printer:   
-        #plt.figure()
-        #myplot(tracker[cropper[0]:cropper[1],cropper[2]:cropper[3]])
-        #plt.title("UNROTATED IMAGE")
-      hXtal = mF.matchedFilter(tracker,rF)
-      if fused:
-        toimage(hXtal).save('fusedFilter_{}.png'.format(val))
-        toimage(hXtal,).save('fusedCorrelated_{}.png'.format(val))
-        #toimage(hXtal).save('fusedCorrelated_Not_rotated_back{}.png'.format(val))
-      else: 
-        toimage(hXtal).save('bulkFilter_{}.png'.format(val))
-        toimage(hXtal).save('bulkCorrelated_{}.png'.format(val))
-        #toimage(hXtal).save('bulkCorrelated_Not_rotated_back{}.png'.format(val))
+      # store outputs
+      # Ryan: my general preference is to have one line per operation for clarity
+      #  toimage(imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_{}.png'.format(val))
+      #  toimage(hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_Not_rotated_back{}.png'.format(val))
+
+      # save
+      #toimage(rotated).save(tag+'_{}.png'.format(val))
+      toimage(unrotated).save(tag+'_Not_rotated_back{}.png'.format(val))
+
+
+    return correlated
+
+def CalcSNR(signalResponse,sigma_n=1):
+  return signalResponse/sigma_n
+
+import util 
+import util2
+def StackHits(correlated,threshold,iters,
+              display=False,rescaleCorr=False,doKMeans=True):
+    maskList = []
+
+    for i, iteration in enumerate(iters):
+        #print "iter", iteration
+        #maskList.append(makeMask(threshold,'fusedCorrelated_Not_rotated_back{}.png'.format(iteration)))
+
+        # RYAN
+        #maskList.append((util2.rotater(util2.makeMask(threshold,imgName='fusedCorrelated_{}.png'.format(iteration)),iteration)))
+        #imgName='fusedCorrelated_{}.png'.format(iteration)
+        #daMask = util2.makeMask(threshold,imgName=imgName)
+
+        # Ryan - I don't think this renormalization is appropriate
+        # as it will artificially inflate 'bad' correlation hits
+        corr_i = correlated[i].corr           
+        if rescaleCorr:
+           img =  util.renorm(corr_i)
+        else: 
+           img=corr_i
+        #print img
+
+        # routine for identifying 'unique' hits
+        #performed on 'unrotated' images 
+        daMask = util2.makeMask(threshold,img = img,doKMeans=doKMeans)
+        if display:
+          plt.figure()
+          plt.subplot(1,2,1)
+          plt.imshow(img)            
+          plt.subplot(1,2,2)
+          plt.imshow(daMask)
+
+        # i don't think this should be rotated 
+        #maskList.append((util2.rotater(daMask,iteration)))
+        maskList.append(daMask)
+    #print maskList
+
+    myList  = np.sum(maskList, axis =0)
+    if display: 
+      plt.figure()
+      plt.imshow(myList)
+    return myList
 
 
 
 
-def paintME(myImg, myFilter1,  threshold = 190, iters = [0,30,60,90], fused =True):
+
+def paintME(myImg, myFilter1,  threshold = 190, cropper=[24,129,24,129],iters = [0,30,60,90], fused =True):
   correlateThresher(myImg, myFilter1,  threshold, cropper,iters, fused, False)
   for i, val in enumerate(iters):
  
@@ -78,3 +215,23 @@ def paintME(myImg, myFilter1,  threshold = 190, iters = [0,30,60,90], fused =Tru
     plt.axis('equal')
     
                 
+
+# Basically just finds a 'unit cell' sized area around each detection 
+# for the purpose of interpolating the data 
+from scipy import signal
+def doLabel(result,dx=10):
+    img =result.stackedHits > 0
+    kernel = np.ones((dx,dx),np.float32)/(dx*dx)
+    
+    filtered = signal.convolve2d(img, kernel, mode='same') / np.sum(kernel)
+
+    plt.subplot(1,3,1)
+    plt.imshow(img)
+    plt.subplot(1,3,2)
+    plt.imshow(filtered)
+    plt.subplot(1,3,3)
+    labeled = filtered > 0
+    plt.imshow(labeled)
+    plt.tight_layout()
+    
+    return labeled
