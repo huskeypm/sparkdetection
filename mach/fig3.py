@@ -7,6 +7,12 @@ class empty():pass
 root = "./testimages/"
 rawData = root+ 'clahe_Best.jpg'
 
+fusedThresh=0.4
+bulkThresh = 0.75
+sigma_n = 1.  # based on Ryan's data 
+iters = [5,30]
+#iters = np.linspace(0,90,10)
+
 ## fused Pore 
 def TestFused():
   testCase = empty()
@@ -19,19 +25,19 @@ def TestFused():
               testCase.subsection[2]:testCase.subsection[3]]
   #imshow(cut)
   
-  sigma_n = 22. # based on Ryan's data 
   
   fusedPoreResult, bulkPoreResult = bD.TestFilters(
     testCase.name, # testData
     root+'fusedCellTEM.png',         # fusedfilter Name
     root+'bulkCellTEM.png',        # bulkFilter name
     subsection=testCase.subsection, #[200,400,200,500],   # subsection of testData
-    fusedThresh = 1000,#.25,
-    bulkThresh = 1050, #.5,
+    fusedThresh = fusedThresh,
+    bulkThresh = bulkThresh,
     label = testCase.label,
     sigma_n = sigma_n,
-    iters = [0,30],
-    display=True
+    iters = iters, 
+    useFilterInv=True,
+    colorHitsOutName="fusedMarked.png"
    )        
 
 
@@ -88,21 +94,20 @@ def TestBulk():
               testCase.subsection[2]:testCase.subsection[3]]
   #imshow(cut)
   
-  sigma_n = 22. # based on Ryan's data 
-  
   fusedPoreResult, bulkPoreResult = bD.TestFilters(
     testCase.name, # testData
     root+'fusedCellTEM.png',         # fusedfilter Name
     root+'bulkCellTEM.png',        # bulkFilter name
     subsection=testCase.subsection, #[200,400,200,500],   # subsection of testData
-    fusedThresh = 1000,#.25,
-    bulkThresh = 1050, #.5,
+    fusedThresh = fusedThresh,
+    bulkThresh = bulkThresh,
     label = testCase.label,
     sigma_n = sigma_n,
-    iters = [0,30],
-    display=True
+    iters = iters, 
+    colorHitsOutName="bulkMarked.png",
+    useFilterInv=True,
    )        
   
 
 TestFused()
-#TestBulk()
+TestBulk()

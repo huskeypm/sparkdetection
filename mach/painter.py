@@ -51,15 +51,20 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
       
       # pad/rotate 
       rF = PadRotate(myFilter1,val)  
+   
+      # rescaling 
+      tN = util.renorm(np.array(tracker,dtype=float),scale=1.)
+      rFN = util.renorm(np.array(rF,dtype=float),scale=1.)
 
       # matched filtering 
-      hXtal = mF.matchedFilter(tracker,rF,demean=False)
+      hXtal = mF.matchedFilter(tN,rFN,demean=False,parsevals=True)
 
       # noise penalty 
       daMax = 255
       hInv = daMax - myFilter1
       rFi = PadRotate(hInv,val)
-      yInv  = mF.matchedFilter(tracker,rFi,demean=False)   
+      rFiN = util.renorm(np.array(rFi,dtype=float),scale=1.)
+      yInv  = mF.matchedFilter(tN,rFiN,demean=False,parsevals=True)   
       
       # crop/rotate image 
       # if filter is being rotated, I don't think we need to rotted the correlated image 
@@ -73,7 +78,31 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
 
       # store
       #print np.min(yInv), np.max(yInv)
-      scaled = unrotated/yInv
+
+      # rescale by penalty 
+      # part of the problem earlier was that the 'weak' responses of the 
+      # inverse filter would amplify the response, since they were < 1.0. 
+      scale = 1. 
+      yInvN =  util.renorm(yInv,scale=1.)
+      unrotatedN =  util.renorm(unrotated,scale=1.)
+      yInvN*= scale 
+      #print np.min(hInv), np.max(hInv) 
+      #print np.min(rFi ), np.max(rFi ) 
+      #print np.min(yInv), np.max(yInv) 
+ 
+      #print "sdfdssdffsfsdf",np.min(unrotated), np.max(unrotated) 
+      #print "sdfdsfsfsdf",np.min(yInvN), np.max(yInvN) 
+
+      unrotatedN = np.exp(unrotatedN)
+      yInvN = np.exp(yInvN)
+      scaled = np.log(unrotatedN/yInvN)
+      # BAD idea scaled=  util.renorm(scaled,scale=1.) [non hits would register 0..1 too] 
+      #print "sdf",np.min(scaled), np.max(scaled) 
+      # store data 
+      if useFilterInv:
+        result.corr = scaled    
+      else:
+        result.corr = unrotated 
 
       #daTitle = "rot %f "%val + "hit %f "%hit + str(hitLoc)
       daTitle = "rot %4.1f "%val + "hit %4.1f "%hit 
@@ -84,18 +113,25 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
         plt.imshow(tracker,cmap='gray')          
         plt.subplot(1,5,2)
         plt.title(daTitle)
-        plt.imshow(rF,cmap="gray")   
+        testImg = np.copy(tracker)
+        dim = np.shape(rF)
+        testImg[0:dim[0],0:dim[1]] += rF 
+        plt.imshow(testImg,cmap="gray")
         #plt.imshow(rFi,cmap="gray")   
         
         plt.subplot(1,5,3)
-        plt.imshow(unrotated)   
+        plt.imshow(unrotatedN)   
+        plt.title("corr output") 
+        plt.colorbar()
 
         if threshold!=None:
           plt.subplot(1,5,4)
-          plt.imshow(unrotated>threshold)   
-          plt.imshow(yInv)                  
+          #plt.imshow(unrotated>threshold)   
+          plt.title("Filter inv")
+          plt.imshow(yInvN)                  
+          plt.colorbar()
           plt.subplot(1,5,5)
-          plt.title("Filter inv") 
+          plt.title("filter/inv") 
           plt.imshow(scaled)                
           plt.colorbar()
         plt.tight_layout()
@@ -113,17 +149,15 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
         plt.imshow(rF,cmap='gray')
         plt.subplot(1,2,2)
         plt.title("Correlation plane") 
-        plt.imshow(unrotated) 
+        plt.imshow(result.corr)                
+        plt.colorbar()
         plt.tight_layout()
-        plt.gcf().savefig(label+"_"+tag+'_{}.png'.format(val),dpi=300)
+        fileName = label+"_"+tag+'_{}.png'.format(val)
+        print fileName 
+        plt.gcf().savefig(fileName,dpi=300)
      
 
 
-      # store data 
-      if useFilterInv:
-        result.corr = scaled    
-      else:
-        result.corr = unrotated 
 
       # 
       result.snr = CalcSNR(result.corr,sigma_n) 
