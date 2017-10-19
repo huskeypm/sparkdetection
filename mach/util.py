@@ -166,3 +166,21 @@ def ConstructInteriorContour(extContour,
 
     return interiorContour
 
+def ApplyCLAHE(grayImgList, tileGridSize, clipLimit=2.0, plot=True):
+    clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
+    clahedimages = []
+    for i,img in enumerate(grayImgList):
+        clahedImage = clahe.apply(img)
+        if plot:
+            #plt.figure()
+            #imshow(img,cmap='gray')
+            #plt.title
+            f, (ax1, ax2) = plt.subplots(1,2)
+            raw = ax1.imshow(img,cmap='gray')
+            f.colorbar(raw, ax=ax1)
+            ax1.set_title("Unaltered Image: "+str(i))
+            altered = ax2.imshow(clahedImage,cmap='gray')
+            f.colorbar(altered, ax=ax2)
+            ax2.set_title("CLAHED Image "+str(i))
+        clahedimages.append(clahedImage)
+    return clahedimages
