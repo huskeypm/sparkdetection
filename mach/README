@@ -6,19 +6,18 @@ Input data are on /net/share/shared/data/hafnium
 MACH.ipynb has validation routines written inside 
 
 
+fig3.py is currently optimized for scale, fusedThresh,bulkTresh
+-- need to extrapolate results 
 
-Doing extensive refactoring
-searching for changes
-abort: push creates new remote branches: PKH!
-(use 'hg push --new-branch' to create new remote branches)
-pmke226@kafka:mach/$ hg push --new-branch
-pushing to ssh://hg@bitbucket.org/huskeypm/sparkdetection
-searching for changes
-remote: adding changesets
-remote: adding manifests
-remote: adding file changes
-remote: added 1 changesets with 5 changes to 5 files
-remote: 
-remote: Create pull request for PKH:
-remote:   https://bitbucket.org/huskeypm/sparkdetection/pull-requests/new?source=PKH&t=1
-remote: 
+optimize::Assess
+  TestParams (both thresh, scale, inv) 
+    bankDetect::TestFilters(both thresh, scale, inv)
+      bankDetect::DetectFilter (fused,scale)
+      bankDetect::DetectFilter (fused,scale)
+-- add new false/true positive images 
+  I think they are OK 
+-- add scale as an optimizable variable 
+      
+
+    
+
