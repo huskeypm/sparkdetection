@@ -10,6 +10,7 @@ import matchedFilter as mF
 import imutils
 from imtools import *
 from matplotlib import cm
+
 def padWithZeros(array, padwidth, iaxis, kwargs):
     array[:padwidth[0]] = 0
     array[-padwidth[1]:]= 0
@@ -31,8 +32,10 @@ def PadRotate(myFilter1,val):
 
 # Need to be careful when cropping image
 def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
-                      iters = [0,30,60,90],  printer = True, filterMode=None,label=None,
+                      iters = [0,30,60,90],  
+                      printer = True, filterMode=None,label=None,
                       useFilterInv=False,
+                      scale = 1.2,  # for rescaling penalty filter 
                       sigma_n=1.,threshold=None):
     # PKH 
     correlated = []
@@ -82,10 +85,8 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
       # rescale by penalty 
       # part of the problem earlier was that the 'weak' responses of the 
       # inverse filter would amplify the response, since they were < 1.0. 
-      scale = 1. 
-      yInvN =  util.renorm(yInv,scale=1.)
       unrotatedN =  util.renorm(unrotated,scale=1.)
-      yInvN*= scale 
+      yInvN =  util.renorm(yInv,scale=1.)
       #print np.min(hInv), np.max(hInv) 
       #print np.min(rFi ), np.max(rFi ) 
       #print np.min(yInv), np.max(yInv) 
@@ -95,7 +96,7 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
 
       unrotatedN = np.exp(unrotatedN)
       yInvN = np.exp(yInvN)
-      scaled = np.log(unrotatedN/yInvN)
+      scaled = np.log(unrotatedN/(scale*yInvN))
       # BAD idea scaled=  util.renorm(scaled,scale=1.) [non hits would register 0..1 too] 
       #print "sdf",np.min(scaled), np.max(scaled) 
       # store data 
@@ -103,6 +104,10 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
         result.corr = scaled    
       else:
         result.corr = unrotated 
+      if filterMode=="fused":
+        tag = "fused"
+      else: 
+        tag = "bulk"
 
       #daTitle = "rot %f "%val + "hit %f "%hit + str(hitLoc)
       daTitle = "rot %4.1f "%val + "hit %4.1f "%hit 
@@ -113,9 +118,10 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
         plt.imshow(tracker,cmap='gray')          
         plt.subplot(1,5,2)
         plt.title(daTitle)
-        testImg = np.copy(tracker)
+        testImg = np.zeros_like(tracker)
         dim = np.shape(rF)
-        testImg[0:dim[0],0:dim[1]] += rF 
+        testImg[0:dim[0],0:dim[1]] = 255*rFN
+        #testImg[0:dim[0],0:dim[1]] = rFiN
         plt.imshow(testImg,cmap="gray")
         #plt.imshow(rFi,cmap="gray")   
         
@@ -135,13 +141,10 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
           plt.imshow(scaled)                
           plt.colorbar()
         plt.tight_layout()
+        fileName = label+"_"+tag+'_{}_full.png'.format(val)
+        plt.gcf().savefig(fileName,dpi=300)
 
       # write
-      if 1: 
-        if filterMode=="fused":
-          tag = "fused"
-        else: 
-          tag = "bulk"
       if label!=None and printer:
         plt.figure()
         plt.subplot(1,2,1)
@@ -153,7 +156,6 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
         plt.colorbar()
         plt.tight_layout()
         fileName = label+"_"+tag+'_{}.png'.format(val)
-        print fileName 
         plt.gcf().savefig(fileName,dpi=300)
      
 
@@ -172,7 +174,7 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
 
       # save
       #toimage(rotated).save(tag+'_{}.png'.format(val))
-      toimage(unrotated).save(tag+'_Not_rotated_back{}.png'.format(val))
+      #toimage(unrotated).save(tag+'_Not_rotated_back{}.png'.format(val))
 
 
     return correlated
