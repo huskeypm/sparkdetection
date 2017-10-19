@@ -62,7 +62,8 @@ def Score(positiveHits,negativeHits,
 
     return positiveScore, negativeScore
 
-def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFilterInv=False):
+def TestParams(fusedThresh=1000.,bulkThresh=1050.,scale=1.2,
+    sigma_n=1.,display=False,useFilterInv=False):
     ### Fused pore
     testCase = empty()
     testCase.name = root + 'clahe_Best.jpg'
@@ -70,7 +71,6 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFi
     #daImg = cv2.imread(testCase.name)
     #cut = daImg[testCase.subsection[0]:testCase.subsection[1],testCase.subsection[2]:testCase.subsection[3]]
     #imshow(cut)
-
 
     optimalAngleFused = 30
     fusedPore_fusedTEM, bulkPore_fusedTEM = bD.TestFilters(
@@ -82,8 +82,10 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFi
       bulkThresh = bulkThresh, #.5,
       #label = "opt.png",
       sigma_n = sigma_n,
-      iters = [optimalAngleFused],
+      #iters = [optimalAngleFused],
       useFilterInv=useFilterInv,
+      scale=scale,
+      colorHitsOutName="fusedMarked_%f_%f.png"%(bulkThresh,fusedThresh),
       display=display
     )        
 
@@ -105,8 +107,10 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFi
       bulkThresh = bulkThresh,#130.,
       label = "filters_on_pristine.png",
       sigma_n=sigma_n,
-      iters = [optimalAngleBulk],
+      #iters = [optimalAngleBulk],
       useFilterInv=useFilterInv,
+      scale=scale,
+      colorHitsOutName="bulkMarked_%f_%f.png"%(bulkThresh,fusedThresh),
       display=display
      )        
     
@@ -300,11 +304,13 @@ if __name__ == "__main__":
     # coarse/fine
       #ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
       #bt = np.concatenate([np.linspace(0.4,0.55,7),np.linspace(0.55,0.65,15)   ])
-      bt = np.linspace(0.005,0.013,9)
-      ft = np.linspace(0.003,0.015,9)
+      bt = np.linspace(0.30,0.50,6)   
+      ft = np.linspace(0.200,0.400,4)
+      scales = np.linspace(0,2,5)
       Assess(
         fusedThreshes = ft,
         bulkThreshes = bt,
+        scales = scales,
         sigma_n = 1.,
         useFilterInv=True,   
         hdf5Name = "optimizeinv.h5",

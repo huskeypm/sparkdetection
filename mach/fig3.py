@@ -6,12 +6,15 @@ import matplotlib.pylab as plt
 class empty():pass
 root = "./testimages/"
 rawData = root+ 'clahe_Best.jpg'
+fuzedData = root+ 'fusedCellTEM.png'
+fuzedData = 'workFlowFused.png'           
+bulkData = root+ 'bulkCellTEM.png'
 
-fusedThresh=0.4
-bulkThresh = 0.75
+fusedThresh=0.2
+bulkThresh = 0.46
 sigma_n = 1.  # based on Ryan's data 
 iters = [5,30]
-#iters = np.linspace(0,90,10)
+iters = np.linspace(0,90,10)
 
 ## fused Pore 
 def TestFused():
@@ -28,8 +31,8 @@ def TestFused():
   
   fusedPoreResult, bulkPoreResult = bD.TestFilters(
     testCase.name, # testData
-    root+'fusedCellTEM.png',         # fusedfilter Name
-    root+'bulkCellTEM.png',        # bulkFilter name
+    fuzedData,                       # fusedfilter Name
+    bulkData,                      # bulkFilter name
     subsection=testCase.subsection, #[200,400,200,500],   # subsection of testData
     fusedThresh = fusedThresh,
     bulkThresh = bulkThresh,
@@ -37,7 +40,8 @@ def TestFused():
     sigma_n = sigma_n,
     iters = iters, 
     useFilterInv=True,
-    colorHitsOutName="fusedMarked.png"
+    scale=1.2,
+    colorHitsOutName="fusedMarkedBest.png"
    )        
 
 
@@ -96,15 +100,16 @@ def TestBulk():
   
   fusedPoreResult, bulkPoreResult = bD.TestFilters(
     testCase.name, # testData
-    root+'fusedCellTEM.png',         # fusedfilter Name
-    root+'bulkCellTEM.png',        # bulkFilter name
+    fuzedData,                       # fusedfilter Name
+    bulkData,                      # bulkFilter name
     subsection=testCase.subsection, #[200,400,200,500],   # subsection of testData
     fusedThresh = fusedThresh,
     bulkThresh = bulkThresh,
     label = testCase.label,
     sigma_n = sigma_n,
     iters = iters, 
-    colorHitsOutName="bulkMarked.png",
+    colorHitsOutName="bulkMarkedBest.png",
+    scale=1.2,
     useFilterInv=True,
    )        
   

@@ -8,21 +8,22 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 class empty:pass
 
 import cv2
-import painter as Paint 
+import painter 
 import numpy as np 
 import matplotlib.pylab as plt 
 
 
-def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,filterMode=None,useFilterInv=False):
+def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,filterMode=None,useFilterInv=False,scale=1.):
   # store
   result = empty()
   result.threshold = threshold
   result.mf= mf
 
   # do correlations across all iter
-  result.correlated = Paint.correlateThresher(
+  result.correlated = painter.correlateThresher(
      dataSet,result.mf, threshold = result.threshold, iters=iters,
      printer=display,sigma_n=sigma_n,
+     scale=scale,
      filterMode=filterMode,
      useFilterInv=useFilterInv,
      label=label)
@@ -36,7 +37,7 @@ def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,
   result.iters = iters 
   
   # stack hits to form 'total field' of hits
-  result.stackedHits = Paint.StackHits(
+  result.stackedHits = painter.StackHits(
     result.correlated,result.threshold,iters,doKMeans=False, display=False)#,display=display)
     
   return result
@@ -114,6 +115,7 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                 colorHitsOutName=None,
                 sigma_n = 1., 
                 iters = [0,10,20,30,40,50,60,70,80,90], 
+                scale=1.0,      
                 useFilterInv=False,
                 label="test"):       
 
@@ -136,10 +138,12 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
     fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,
                                    iters,display=display,sigma_n=sigma_n,
                                    filterMode="fused",label=label,
+                                   scale=scale,
                                    useFilterInv=useFilterInv)
     bulkPoreResult = DetectFilter( testData,bulkFilter,bulkThresh,
                                    iters,display=display,sigma_n=sigma_n,
                                    filterMode="bulk",label=label,
+                                   scale=scale,
                                    useFilterInv=useFilterInv)
     if colorHitsOutName!=None: 
       colorHits(testData,
