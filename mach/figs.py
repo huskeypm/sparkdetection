@@ -1,3 +1,6 @@
+"""
+Generates figure for paper 
+"""
 import cv2
 import numpy as np
 import bankDetect as bD
@@ -28,15 +31,20 @@ def GenFigROC():
   bt = np.linspace(0.05,0.50,10)
   ft = np.linspace(0.05,0.30,10)
   scales = [1.2]  # tried optimizing, but performance seemed to decline quickly far from 1.2 nspace(1.0,1.5,6)  
-  optimizer.Assess(
+  hdf5Name = "optimizeinvscale.h5"
+  if 0:
+    optimizer.Assess(
         fusedThreshes = ft,
         bulkThreshes = bt,
         scales = scales,
         sigma_n = 1.,
         useFilterInv=True,
-        hdf5Name = "optimizeinvscale.h5",
+        hdf5Name = hdf5Name,
         display=False
       )
+  import pandas as pd
+  df = pd.read_hdf(hdf5Name,'table') 
+
   optimizer.AnalyzePerformanceData(df,tag='bulk',
                                  normalize=True, roc=True,outName="bulkROC.png")
   optimizer.AnalyzePerformanceData(df,tag='fused',
@@ -108,8 +116,9 @@ def GenFigN():
 import painter
 def Extrapolate(
   testCase,
-  bulk = 1.,
-  fused = 5.,
+  expPerm = 1.4e-6, # m/s
+  bulkPerm = 10**(-6.35),
+  fusedPerm= 10**(-6.21),
   tag = None
   ):
   daImg = cv2.imread(testCase.name)
@@ -123,27 +132,49 @@ def Extrapolate(
   fusedPoreResult.labeled = painter.doLabel(fusedPoreResult)
   plt.figure()
   bulkPoreResult.labeled = painter.doLabel(bulkPoreResult)
-    
-
-  unk = np.mean([bulk,fused])
-
+  ##########
   # create map, assume everthing that isn't characterized is 'unk' 
   # with a permeation somewhere between bulk and fused
-  permeationMap  = unk * np.ones_like(raw)
+  # define your permeation properties
+  unkPerm = np.mean([bulkPerm,fusedPerm])
+
+  # if pixel is marked as both fused and bulk, assign pixel as fused
+  # inelegant soln, but oh well
+  isUnk=0
+  isBulk=1
+  isFused=2
+  permeationIdx  = isUnk * np.ones_like(raw)
+  permeationMap  = unkPerm * np.ones_like(raw)
   totArea =  np.prod(np.shape(permeationMap))*1.  
+    
+
 
   # add bulk 
   isTrue = np.where(bulkPoreResult.labeled)  
-  permeationMap[ isTrue  ] = bulk
+  permeationMap[ isTrue  ] = bulkPerm 
+  permeationIdx[ isTrue  ] = isBulk  
   #print np.shape( isTrue)
-  areaBulk = np.shape( isTrue )[1]/totArea
+  #areaBulk = np.shape( isTrue )[1]/totArea
   
     
-    # add fused
+  # add fused
   isTrue = np.where(fusedPoreResult.labeled)  
-  permeationMap[ isTrue  ] = fused
+  permeationMap[ isTrue  ] = fusedPerm
+  permeationIdx[ isTrue  ] = isFused  
+    
+  # get SAs  
+  isTrue = np.where(permeationIdx==isBulk)      
+  areaBulk  = np.shape( isTrue )[1]/totArea
+ 
+  isTrue = np.where(permeationIdx==isFused)      
   areaFused = np.shape( isTrue )[1]/totArea
 
+  isTrue = np.where(permeationIdx==isUnk)      
+  areaUnk = np.shape( isTrue )[1]/totArea
+
+    
+
+  ###############
   plt.subplot(1,2,1)
   plt.imshow(raw,cmap='gray')
   plt.title("Raw")
@@ -153,13 +184,16 @@ def Extrapolate(
   #plt.pcolormesh(np.flipud(permeationMap),cmap='gray')
   plt.imshow(permeationMap,cmap='gray')
  
-  areaUnk = 1. - areaBulk - areaFused
   if tag!=None:
     print tag
-  print "Bulk, Fused,Unk"
+  print "Frac are: Bulk, Fused,Unk"
+  print areaBulk+ areaFused+ areaUnk
   print areaBulk, areaFused, areaUnk
-  perm = areaBulk*bulk + areaFused*fused + areaUnk*unk
-  print "eff perm", perm
+
+  # compute surface area wighted perm 
+  effPerm = areaBulk*bulkPerm + areaFused*fusedPerm + areaUnk*unkPerm
+  print "eff perm", effPerm, "log(Peff)", np.log10(effPerm)
+  print "exp perm", expPerm
     
   #plt.figure()
   #plt.axes().set_aspect('equal', 'datalim')
@@ -172,6 +206,8 @@ def Extrapolate(
 
   
 #needs work GenFigN()
+# Gneerates fig 3, as well as extrapolation values 
 GenFig3()
+# 
 #GenFigROC()
   
