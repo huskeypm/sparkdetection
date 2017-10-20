@@ -1,3 +1,8 @@
+
+########
+python figs.py # generates images, extrapolation vlues 
+######
+
 #### fused EM
 IMG=fusedEM
 TYPE=fused
