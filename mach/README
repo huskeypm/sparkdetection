@@ -17,6 +17,7 @@ optimize::Assess
 -- add new false/true positive images 
   I think they are OK 
 -- add scale as an optimizable variable 
+  Not easy to test 
       
 
     

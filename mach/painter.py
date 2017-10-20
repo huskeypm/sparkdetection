@@ -107,11 +107,11 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
       if printer:   
         plt.figure(figsize=(16,5))
         plt.subplot(1,5,1)
-        plt.imshow(tracker,cmap='gray')          
+        plt.imshow(adapt99,cmap='gray')          
         plt.subplot(1,5,2)
         plt.title(daTitle)
-        testImg = np.zeros_like(tracker)
-        dim = np.shape(rF)
+        testImg = np.zeros_like(adapt99)
+        dim = np.shape(rFN)
         testImg[0:dim[0],0:dim[1]] = 255*rFN
         #testImg[0:dim[0],0:dim[1]] = rFiN
         plt.imshow(testImg,cmap="gray")
@@ -141,7 +141,7 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
         plt.figure()
         plt.subplot(1,2,1)
         plt.title("Rotated filter") 
-        plt.imshow(rF,cmap='gray')
+        plt.imshow(rFN,cmap='gray')
         plt.subplot(1,2,2)
         plt.title("Correlation plane") 
         plt.imshow(result.corr)                

@@ -145,7 +145,7 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,scale=1.2,
     print fusedThresh,bulkThresh,fusedPS,bulkNS,bulkPS,fusedNS
     return fusedPS,bulkNS,bulkPS,fusedNS
 
-def AnalyzePerformanceData(dfOrig,tag='bulk',normalize=False,roc=True,scale=None):
+def AnalyzePerformanceData(dfOrig,tag='bulk',normalize=False,roc=True,scale=None,outName=None):
     df = dfOrig
     if scale!=None:
       df=dfOrig[dfOrig.scale==scale]
@@ -205,6 +205,8 @@ def AnalyzePerformanceData(dfOrig,tag='bulk',normalize=False,roc=True,scale=None
     ax.set_ylabel("True positive rate (Normalized)") 
     ax.set_xlabel("False positive rate (Normalized)") 
     plt.tight_layout()
+    if outName:
+      plt.gcf().savefig(outName,dpi=300)
 
 import pandas as pd
 
