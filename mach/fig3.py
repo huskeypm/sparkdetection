@@ -9,12 +9,16 @@ rawData = root+ 'clahe_Best.jpg'
 fuzedData = root+ 'fusedCellTEM.png'
 fuzedData = 'workFlowFused.png'           
 bulkData = root+ 'bulkCellTEM.png'
-
+scale=1.2
 fusedThresh=0.2
 bulkThresh = 0.46
 sigma_n = 1.  # based on Ryan's data 
 iters = [5,30]
 iters = np.linspace(0,90,10)
+
+def GenFig3(): 
+  TestFused()
+  TestBulk()
 
 ## fused Pore 
 def TestFused():
@@ -22,13 +26,28 @@ def TestFused():
   testCase.label = "fusedEM"
   testCase.name = rawData
   testCase.subsection=[340,440,400,500]
-  daImg = cv2.imread(testCase.name)
-  daImg = cv2.cvtColor(daImg, cv2.COLOR_BGR2GRAY)
-  raw = daImg[testCase.subsection[0]:testCase.subsection[1],
-              testCase.subsection[2]:testCase.subsection[3]]
+  testCase.outName = "fusedMarkedBest.png"
+  #daImg = cv2.imread(testCase.name)
+  #daImg = cv2.cvtColor(daImg, cv2.COLOR_BGR2GRAY)
+  #raw = daImg[testCase.subsection[0]:testCase.subsection[1],
+  #            testCase.subsection[2]:testCase.subsection[3]]
   #imshow(cut)
+  DoTest(testCase,fusedThresh=fusedThresh,bulkThresh=bulkThresh)
+
+## fused Pore 
+def TestBulk():
+  testCase = empty()
+  testCase.label = "bulkEM"
+  testCase.name = rawData
+  testCase.subsection=[250,350,50,150] 
+  testCase.outName="bulkMarkedBest.png"
+  DoTest(testCase,fusedThresh=fusedThresh,bulkThresh=bulkThresh)
   
   
+def DoTest(testCase,
+  fusedThresh=0.2,
+  bulkThresh = 0.46
+  ):
   fusedPoreResult, bulkPoreResult = bD.TestFilters(
     testCase.name, # testData
     fuzedData,                       # fusedfilter Name
@@ -40,16 +59,28 @@ def TestFused():
     sigma_n = sigma_n,
     iters = iters, 
     useFilterInv=True,
-    scale=1.2,
-    colorHitsOutName="fusedMarkedBest.png"
+    scale=scale,
+    colorHitsOutName=testCase.outName      
    )        
 
 
-  import painter
-  fusedPoreResult.labeled = painter.doLabel(fusedPoreResult)
-  plt.figure()
-  bulkPoreResult.labeled = painter.doLabel(bulkPoreResult)
-  ExtrapToRaw(raw,fusedPoreResult,bulkPoreResult)
+def GenFigN():
+  testCase = empty()
+  testCase.label = "totalEM"
+  testCase.name = rawData
+  testCase.subsection=None; #[250,350,50,150] 
+  testCase.outName="fullBest.png"
+  DoTest(testCase,fusedThresh=0.2*fusedThresh,bulkThresh=0.2*bulkThresh)
+  
+  
+
+
+  if 0: 
+    import painter
+    fusedPoreResult.labeled = painter.doLabel(fusedPoreResult)
+    plt.figure()
+    bulkPoreResult.labeled = painter.doLabel(bulkPoreResult)
+    ExtrapToRaw(raw,fusedPoreResult,bulkPoreResult)
 
 def ExtrapToRaw(raw,bulkPoreResult,fusedPoreResult):
   # define your permeation properties
@@ -87,32 +118,6 @@ def ExtrapToRaw(raw,bulkPoreResult,fusedPoreResult):
 
 
   
-## fused Pore 
-def TestBulk():
-  testCase = empty()
-  testCase.label = "bulkEM"
-  testCase.name = rawData
-  testCase.subsection=[250,350,50,150] 
-  daImg = cv2.imread(testCase.name)
-  cut = daImg[testCase.subsection[0]:testCase.subsection[1],
-              testCase.subsection[2]:testCase.subsection[3]]
-  #imshow(cut)
+#GenFig3()
+GenFigN()
   
-  fusedPoreResult, bulkPoreResult = bD.TestFilters(
-    testCase.name, # testData
-    fuzedData,                       # fusedfilter Name
-    bulkData,                      # bulkFilter name
-    subsection=testCase.subsection, #[200,400,200,500],   # subsection of testData
-    fusedThresh = fusedThresh,
-    bulkThresh = bulkThresh,
-    label = testCase.label,
-    sigma_n = sigma_n,
-    iters = iters, 
-    colorHitsOutName="bulkMarkedBest.png",
-    scale=1.2,
-    useFilterInv=True,
-   )        
-  
-
-TestFused()
-TestBulk()
