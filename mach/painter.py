@@ -1,3 +1,12 @@
+"""
+Note: this needs to be consolidated into our MF routines
+- plotting/etc should go in util maybe
+- convolutions etc should go in matchedfilter
+
+Routines need to go into a separate repository, that can be shared
+between TT and PNP projects. MACH stuff needs to be on a separate/private branch 
+"""
+
 from copy import copy
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,80 +46,63 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
                       useFilterInv=False,
                       scale = 1.2,  # for rescaling penalty filter 
                       sigma_n=1.,threshold=None):
-    # PKH 
+    # Store all 'hits' at each angle 
     correlated = []
 
     # Ryan ?? equalized image?
     clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
     cl1 = clahe99.apply(myImg)
-    #cv2.imwrite('clahe_99.jpg',cl1)
-    #adapt99 = ReadImg('clahe_99.jpg')
     adapt99 = cl1
+
+    filterRef = util.renorm(np.array(myFilter1,dtype=float),scale=1.)
 
     for i, val in enumerate(iters):
       result = empty()
-      # ????????
-      tracker = np.copy(adapt99)
+      # copy of original image 
+      tN = util.renorm(np.array(adapt99,dtype=float),scale=1.)
       
+      ## 'positive' filter 
       # pad/rotate 
-      rF = PadRotate(myFilter1,val)  
+      rFN = PadRotate(filterRef,val)  
    
-      # rescaling 
-      tN = util.renorm(np.array(tracker,dtype=float),scale=1.)
-      rFN = util.renorm(np.array(rF,dtype=float),scale=1.)
-
       # matched filtering 
-      hXtal = mF.matchedFilter(tN,rFN,demean=False,parsevals=True)
+      yP = mF.matchedFilter(tN,rFN,demean=False,parsevals=True)
 
-      # noise penalty 
-      daMax = 255
-      hInv = daMax - myFilter1
-      rFi = PadRotate(hInv,val)
+      ## negative filter 
+      s=1.  
+      fInv = np.max(filterRef)- s*filterRef
+      rFi = PadRotate(fInv,val)
       rFiN = util.renorm(np.array(rFi,dtype=float),scale=1.)
       yInv  = mF.matchedFilter(tN,rFiN,demean=False,parsevals=True)   
       
-      # crop/rotate image 
-      # if filter is being rotated, I don't think we need to rotted the correlated image 
-      #rotated = imutils.rotate(hXtal,(-val-1)) # [cropper[0]:cropper[1],cropper[2]:cropper[3]]
-      unrotated = hXtal # [cropper[0]:cropper[1],cropper[2]:cropper[3]]
-
       # spot check results
-      hit = np.max(unrotated) 
-      hitLoc = np.argmax(unrotated) 
-      hitLoc =np.unravel_index(hitLoc,np.shape(unrotated))
+      #hit = np.max(yP) 
+      #hitLoc = np.argmax(yP) 
+      #hitLoc =np.unravel_index(hitLoc,np.shape(yP))
 
-      # store
-      #print np.min(yInv), np.max(yInv)
-
-      # rescale by penalty 
+      ## rescale by penalty 
       # part of the problem earlier was that the 'weak' responses of the 
       # inverse filter would amplify the response, since they were < 1.0. 
-      unrotatedN =  util.renorm(unrotated,scale=1.)
+      yPN =  util.renorm(yP,scale=1.)
       yInvN =  util.renorm(yInv,scale=1.)
-      #print np.min(hInv), np.max(hInv) 
-      #print np.min(rFi ), np.max(rFi ) 
-      #print np.min(yInv), np.max(yInv) 
- 
-      #print "sdfdssdffsfsdf",np.min(unrotated), np.max(unrotated) 
-      #print "sdfdsfsfsdf",np.min(yInvN), np.max(yInvN) 
 
-      unrotatedN = np.exp(unrotatedN)
-      yInvN = np.exp(yInvN)
-      scaled = np.log(unrotatedN/(scale*yInvN))
-      # BAD idea scaled=  util.renorm(scaled,scale=1.) [non hits would register 0..1 too] 
-      #print "sdf",np.min(scaled), np.max(scaled) 
+      yPN = np.exp(yPN)
+      yInvS = scale*np.exp(yInvN)
+      scaled = np.log(yPN/(yInvS))
+
       # store data 
       if useFilterInv:
         result.corr = scaled    
       else:
-        result.corr = unrotated 
+        result.corr = yP 
+
       if filterMode=="fused":
         tag = "fused"
       else: 
         tag = "bulk"
 
       #daTitle = "rot %f "%val + "hit %f "%hit + str(hitLoc)
-      daTitle = "rot %4.1f "%val + "hit %4.1f "%hit 
+      daTitle = "rot %4.1f "%val # + "hit %4.1f "%hit 
       #print daTitle
       if printer:   
         plt.figure(figsize=(16,5))
@@ -126,13 +118,13 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
         #plt.imshow(rFi,cmap="gray")   
         
         plt.subplot(1,5,3)
-        plt.imshow(unrotatedN)   
+        plt.imshow(yPN)   
         plt.title("corr output") 
         plt.colorbar()
 
         if threshold!=None:
           plt.subplot(1,5,4)
-          #plt.imshow(unrotated>threshold)   
+          #plt.imshow(yP>threshold)   
           plt.title("Filter inv")
           plt.imshow(yInvN)                  
           plt.colorbar()
@@ -163,18 +155,18 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
 
       # 
       result.snr = CalcSNR(result.corr,sigma_n) 
-      result.hit = hit
-      result.hitLoc = hitLoc
+      #result.hit = hit
+      #result.hitLoc = hitLoc
       correlated.append(result) 
     
       # store outputs
       # Ryan: my general preference is to have one line per operation for clarity
-      #  toimage(imutils.rotate(hXtal,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_{}.png'.format(val))
-      #  toimage(hXtal[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_Not_rotated_back{}.png'.format(val))
+      #  toimage(imutils.rotate(yP,(-val-1))[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_{}.png'.format(val))
+      #  toimage(yP[cropper[0]:cropper[1],cropper[2]:cropper[3]]).save('bulkCorrelated_Not_rotated_back{}.png'.format(val))
 
       # save
       #toimage(rotated).save(tag+'_{}.png'.format(val))
-      #toimage(unrotated).save(tag+'_Not_rotated_back{}.png'.format(val))
+      #toimage(yP).save(tag+'_Not_rotated_back{}.png'.format(val))
 
 
     return correlated
@@ -207,7 +199,7 @@ def StackHits(correlated,threshold,iters,
         #print img
 
         # routine for identifying 'unique' hits
-        #performed on 'unrotated' images 
+        #performed on 'yP' images 
         daMask = util2.makeMask(threshold,img = img,doKMeans=doKMeans)
         if display:
           plt.figure()

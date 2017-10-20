@@ -145,7 +145,11 @@ def TestParams(fusedThresh=1000.,bulkThresh=1050.,scale=1.2,
     print fusedThresh,bulkThresh,fusedPS,bulkNS,bulkPS,fusedNS
     return fusedPS,bulkNS,bulkPS,fusedNS
 
-def AnalyzePerformanceData(df,tag='bulk',normalize=False,roc=True):
+def AnalyzePerformanceData(dfOrig,tag='bulk',normalize=False,roc=True,scale=None):
+    df = dfOrig
+    if scale!=None:
+      df=dfOrig[dfOrig.scale==scale]
+    
 
     #plt.figure()
     threshID=tag+'Thresh'
@@ -155,14 +159,23 @@ def AnalyzePerformanceData(df,tag='bulk',normalize=False,roc=True):
       f,(ax1,ax2) = plt.subplots(1,2)     
     else: 
       f,(ax1) = plt.subplots(1,1)     
-    ax1.set_title(threshID+" threshold")
-    ax1.scatter(df[threshID], df[tag+'PS'],label=tag+"/positive",c='b')
-    if normalize==False:
-      ax1.scatter(df[threshID], df[tag+'NS'],label=tag+"/negative",c='r')
-    else:
+    title = threshID+" threshold"
+    if scale!=None:
+      title+=" scale %3.1f"%scale 
+    ax1.set_title(title)  
+    if normalize:
       maxNS = np.max( df[tag+'NS'].values ) 
-      ax1.scatter(df[threshID], df[tag+'NS']/maxNS,label=tag+"/negative",c='r')
-      ax1.set_ylabel("False normalized") 
+      dfNS=df[tag+'NS']/maxNS
+      maxPS = np.max( df[tag+'PS'].values ) 
+      dfPS=df[tag+'PS']/maxPS
+    else:
+      maxNS = 1; maxPS=1.
+      dfNS=df[tag+'NS']
+      dfPS=df[tag+'PS']
+
+    ax1.scatter(df[threshID], dfPS,label=tag+"/positive",c='b')
+    ax1.scatter(df[threshID], dfNS,label=tag+"/negative",c='r')
+    ax1.set_ylabel("Normalized rate") 
     ax1.set_xlabel("threshold") 
     ax1.set_ylim([0,1]) 
     ax1.set_xlim(xmin=0)
@@ -174,7 +187,7 @@ def AnalyzePerformanceData(df,tag='bulk',normalize=False,roc=True):
 
     ax=ax2   
     ax.set_title("ROC")
-    ax.scatter(df[tag+'NS'],df[tag+'PS'])
+    ax.scatter(dfNS,dfPS)
     ax.set_ylim([0,1])
     ax.set_xlim(xmin=0)
 
@@ -182,14 +195,15 @@ def AnalyzePerformanceData(df,tag='bulk',normalize=False,roc=True):
     numbers = np.arange( np.shape(result)[0])
     numbers = numbers[::50]
     #numbers = [i]
+   
     for i in numbers:
         #print i
         thresh= result[threshID].values[i]
-        ax.scatter(result[tag+'NS'].values[i],result[tag+'PS'].values[i],c="r")
-        loc = (result[tag+'NS'].values[i],-0.1+result[tag+'PS'].values[i])
+        ax.scatter(result[tag+'NS'].values[i]/maxNS,result[tag+'PS'].values[i]/maxPS,c="r")
+        loc = (result[tag+'NS'].values[i]/maxNS,-0.1+result[tag+'PS'].values[i]/maxPS)
         ax.annotate("%4.2f"%thresh, loc)
-    ax.set_ylabel("True positive rate") 
-    ax.set_xlabel("False positive rate") 
+    ax.set_ylabel("True positive rate (Normalized)") 
+    ax.set_xlabel("False positive rate (Normalized)") 
     plt.tight_layout()
 
 import pandas as pd
@@ -200,6 +214,7 @@ import pandas as pd
 def Assess(
   fusedThreshes = np.linspace(800,1100,10), 
   bulkThreshes = np.linspace(800,1100,10), 
+  scales=[1.2],  
   hdf5Name = "optimizer.h5",
   sigma_n = 1.,
   useFilterInv=False,
@@ -212,18 +227,25 @@ def Assess(
   # iterate of thresholds
   for i,fusedThresh in enumerate(fusedThreshes):
     for j,bulkThresh in enumerate(bulkThreshes):
-      fusedPS,bulkNS,bulkPS,fusedNS = TestParams(fusedThresh=fusedThresh,bulkThresh=bulkThresh,
-                                                 sigma_n=sigma_n,useFilterInv=useFilterInv,display=display)
-      raw_data =  {\
-       'fusedThresh': fusedThresh,
-       'bulkThresh': bulkThresh,
-       'fusedPS': fusedPS,
-       'bulkNS': bulkNS,
-       'bulkPS': bulkPS,
-       'fusedNS': fusedNS}
-      #print raw_data
-      dfi = pd.DataFrame(raw_data,index=[0])#columns = ['fusedThresh','bulkThresh','fusedPS','bulkNS','bulkPS','fusedNS'])
-      df=df.append(dfi)
+      for k,scale      in enumerate(scales):       
+        fusedPS,bulkNS,bulkPS,fusedNS = TestParams(
+          fusedThresh=fusedThresh,bulkThresh=bulkThresh,
+          sigma_n=sigma_n,
+          scale=scale,
+          useFilterInv=useFilterInv,
+          display=display)
+
+        raw_data =  {\
+         'fusedThresh': fusedThresh,
+         'bulkThresh': bulkThresh,
+         'scale': scale,                
+         'fusedPS': fusedPS,
+         'bulkNS': bulkNS,
+         'bulkPS': bulkPS,
+         'fusedNS': fusedNS}
+        #print raw_data
+        dfi = pd.DataFrame(raw_data,index=[0])#columns = ['fusedThresh','bulkThresh','fusedPS','bulkNS','bulkPS','fusedNS'])
+        df=df.append(dfi)
 
   # store in hdf5 file
   print "Printing " , hdf5Name 
@@ -304,16 +326,16 @@ if __name__ == "__main__":
     # coarse/fine
       #ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
       #bt = np.concatenate([np.linspace(0.4,0.55,7),np.linspace(0.55,0.65,15)   ])
-      bt = np.linspace(0.30,0.50,6)   
-      ft = np.linspace(0.200,0.400,4)
-      scales = np.linspace(0,2,5)
+      bt = np.linspace(0.05,0.50,10)  
+      ft = np.linspace(0.05,0.30,10) 
+      scales = [1.2]  # tried optimizing, but performance seemed to decline quickly far from 1.2 nspace(1.0,1.5,6)  
       Assess(
         fusedThreshes = ft,
         bulkThreshes = bt,
         scales = scales,
         sigma_n = 1.,
         useFilterInv=True,   
-        hdf5Name = "optimizeinv.h5",
+        hdf5Name = "optimizeinvscale.h5",
         display=False
       )
       quit()
