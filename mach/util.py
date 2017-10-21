@@ -166,21 +166,213 @@ def ConstructInteriorContour(extContour,
 
     return interiorContour
 
-def ApplyCLAHE(grayImgList, tileGridSize, clipLimit=2.0, plot=True):
+def ApplyCLAHE(grayImgList, tileGridSize, clipLimit=2.0, plot=False):
     clahe = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
     clahedimages = []
     for i,img in enumerate(grayImgList):
         clahedImage = clahe.apply(img)
-        if plot:
+        #if plot:
             #plt.figure()
             #imshow(img,cmap='gray')
             #plt.title
-            f, (ax1, ax2) = plt.subplots(1,2)
-            raw = ax1.imshow(img,cmap='gray')
-            f.colorbar(raw, ax=ax1)
-            ax1.set_title("Unaltered Image: "+str(i))
-            altered = ax2.imshow(clahedImage,cmap='gray')
-            f.colorbar(altered, ax=ax2)
-            ax2.set_title("CLAHED Image "+str(i))
+            #f, (ax1, ax2) = plt.subplots(1,2)
+            #raw = ax1.imshow(img,cmap='gray')
+            #f.colorbar(raw, ax=ax1)
+            #ax1.set_title("Unaltered Image: "+str(i))
+            #altered = ax2.imshow(clahedImage,cmap='gray')
+            #f.colorbar(altered, ax=ax2)
+            #ax2.set_title("CLAHED Image "+str(i))
         clahedimages.append(clahedImage)
     return clahedimages
+
+def GenerateWTFilter(WTFilterRoot="./images/filterImgs/WT/", filterTwoSarcSize=24):
+  WTFilterImgs = []
+  import os
+  for fileName in os.listdir(WTFilterRoot):
+      img = cv2.imread(WTFilterRoot+fileName)
+      gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    
+      # let's try and measure two sarc size based on column px intensity separation
+      colSum = np.sum(gray,axis=0)
+      colSum = colSum.astype('float')
+    
+      # get slopes to automatically determine two sarcolemma size for the filter images
+      rolledColSum = np.roll(colSum,-1)
+      slopes = rolledColSum - colSum
+      slopes = slopes[:-1]
+      #print slopes
+    
+      idxs = []
+      for i in range(len(slopes)-1):
+          if slopes[i] > 0 and slopes[i+1] <= 0:
+            idxs.append(i)
+      if len(idxs) > 2:
+          raise RuntimeError, "You have more than two peaks striations in your filter, think about discarding this image"
+    
+      twoSarcDist = 2 * (idxs[-1] - idxs[0])
+      scale = float(filterTwoSarcSize) / float(twoSarcDist)
+      resizedFilterImg = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+  
+      WTFilterImgs.append(resizedFilterImg)
+  minHeightImgs = min(map(lambda x: np.shape(x)[0], WTFilterImgs))
+  for i,img in enumerate(WTFilterImgs):
+      WTFilterImgs[i] = img[:minHeightImgs,:]
+
+  colSums = []
+  sortedWTFilterImgs = sorted(WTFilterImgs, key=lambda x: np.shape(x)[1])
+  minNumCols = np.shape(sortedWTFilterImgs[0])[1]
+  for img in sortedWTFilterImgs:
+      colSum = np.sum(img,axis=0)
+    
+  bestIdxs = []
+  for i in range(len(sortedWTFilterImgs)-1):
+      # line up each striation with the one directly 'above' it in list
+      img = sortedWTFilterImgs[i].copy()
+      img = img.astype('float')
+      lengthImg = np.shape(img)[1]
+      nextImg = sortedWTFilterImgs[i+1].copy()
+      nextImg = nextImg.astype('float')
+      nextLengthImg = np.shape(nextImg)[1]
+    
+      errOld = 10e10
+      bestIdx = 0
+      for idx in range(nextLengthImg - minNumCols):
+          err = np.sum(np.power(np.sum(nextImg[:,idx:(minNumCols+idx)],axis=0) - np.sum(img,axis=0),2))
+          if err < errOld:
+              bestIdx = idx
+              errOld = err
+      bestIdxs.append(bestIdx)
+      sortedWTFilterImgs[i+1] = nextImg[:,bestIdx:(minNumCols+bestIdx)]
+
+
+  WTFilter = np.mean(np.asarray(sortedWTFilterImgs),axis=0)
+  WTFilter /= np.max(WTFilter)
+  return WTFilter
+
+
+
+
+def GenerateLongFilter(filterRoot, twoSarcLengthDict, filterTwoSarcLength=24):
+
+  # Script to generate the WT filter. This will be thrown into util.py when complete
+
+  import os
+  import operator
+
+  '''
+  Input
+ 
+   - Directory where the filter images are located
+   - Dictionary containing two sarcolemma size for the images (measured previously)
+   - Desired filter two sarcolemma size
+  '''
+
+  # Parameters - Sample Input
+
+  '''
+  filterRoot = "./images/Remodeled_TTs/"
+  twoSarcLengthDict = {"SongWKY_long1":8,
+                       "Xie_RV_Control_long2":7,
+                       "Xie_RV_Control_long1":8,
+                       "Guo2013Fig1C_long1":11
+                       }
+  filterTwoSarcLength = 24
+  '''
+
+  # Read in images, gray scale, normalize
+
+  colLengths = {}
+  rowLengths = {}
+  imgDict = {}
+  colSums = {}
+  rowSums = {}
+  #colSlopes = {}
+  for fileName in os.listdir(filterRoot):
+      if 'long' in fileName:
+          img = cv2.imread(filterRoot+fileName)
+          goodName = fileName.split(".")[0]
+
+          gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+          gray = gray.astype('float')
+          gray /= np.max(gray)
+
+          #imgDict[goodName] = gray
+
+          scale = float(filterTwoSarcLength) / float(twoSarcLengthDict[goodName])
+          resized = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+
+          imgDim = np.shape(resized)
+          colLengths[goodName] = imgDim[1]
+          rowLengths[goodName] = imgDim[0]
+          colSums[goodName] = np.sum(resized,axis=0)
+          rowSums[goodName] = np.sum(resized,axis=1)
+          #slope = np.roll(colSums[goodName],-1) - colSums[goodName]
+
+          imgDict[goodName] = resized
+
+
+  # ### Line up based on the column sums (lining up the TT striation)
+
+  # First order images in terms of their column lengths
+
+
+  sortedColLengths = sorted(colLengths, key=operator.itemgetter(1), reverse=True)
+  minLength = colLengths[sortedColLengths[0]]
+
+
+  # Now iterate through the list of images, lining up the column lengths
+
+  # In[110]:
+
+  for i in range(len(sortedColLengths) - 1):
+      img = imgDict[sortedColLengths[i]]
+      imgLength = colLengths[sortedColLengths[i]]
+
+      nextImg = imgDict[sortedColLengths[i+1]]
+      nextImgLength = colLengths[sortedColLengths[i+1]]
+
+      errOld = 10e15
+      bestIdx = 0
+      for idx in range(nextImgLength - minLength):
+          err = np.sum(np.power(np.sum(nextImg[:,idx:(minLength+idx)],axis=0) - np.sum(img,axis=0),2))
+          if err < errOld:
+              bestIdx = idx
+              errOld = err
+      imgDict[sortedColLengths[i+1]] = imgDict[sortedColLengths[i+1]][:,bestIdx:(minLength+bestIdx)]
+
+  # ### Line up based on the row sums (lining up the transverse portion)
+
+  # Repeating the same procedure as above
+
+
+  sortedRowLengths = sorted(rowLengths, key=operator.itemgetter(1), reverse=True)
+  minHeight = rowLengths[sortedRowLengths[0]]
+
+  for i in range(len(sortedRowLengths) - 1):
+      #print i
+      img = imgDict[sortedRowLengths[i]]
+      imgHeight = rowLengths[sortedRowLengths[i]]
+      #print sortedRowLengths[i]
+      nextImg = imgDict[sortedRowLengths[i+1]]
+      nextImgHeight = rowLengths[sortedRowLengths[i+1]]
+      #print sortedRowLengths[i+1]
+
+      errOld = 10e15
+      bestIdx = 0
+      for idx in range(nextImgHeight - minHeight - 1):
+          #print idx
+          err = np.sum(np.power(np.sum(nextImg[idx:(minHeight+idx),:],axis=1) - np.sum(img,axis=1),2))
+          if err < errOld:
+              bestIdx = idx
+              errOld = err
+      imgDict[sortedRowLengths[i+1]] = nextImg[bestIdx:(minHeight+bestIdx),:]
+
+
+  # ### Output the image
+
+  # In[124]:
+
+  avgImg = np.sum(np.asarray([v for (k,v) in imgDict.iteritems()]),axis=0)
+  avgImg /= np.max(avgImg)
+  return avgImg
