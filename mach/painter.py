@@ -87,7 +87,7 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
       yInvN =  util.renorm(yInv,scale=1.)
 
       yPN = np.exp(yPN)
-      yInvS = scale*np.exp(yInvN)
+      yInvS = sigma_n*scale*np.exp(yInvN)
       scaled = np.log(yPN/(yInvS))
 
       # store data 
