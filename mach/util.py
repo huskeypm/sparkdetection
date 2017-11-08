@@ -376,3 +376,44 @@ def GenerateLongFilter(filterRoot, twoSarcLengthDict, filterTwoSarcLength=24):
   avgImg = np.sum(np.asarray([v for (k,v) in imgDict.iteritems()]),axis=0)
   avgImg /= np.max(avgImg)
   return avgImg
+
+def PadWithZeros(img, padding = 15):
+  '''
+  routine to pad your image with a border of zeros. This reduces the 
+  unwanted response from shifting the nyquist.
+  '''
+
+  imgType = type(img[0,0])
+  imgDim = np.shape(img)
+    
+  newImg = np.zeros([imgDim[0]+2*padding, imgDim[1]+2*padding])
+  newImg[padding:-padding,padding:-padding] = img
+  newImg = newImg.astype(imgType)
+    
+  return newImg
+
+def Depad(img, padding=15):
+  '''
+  routine to return the img passed into 'PadWithZeros' 
+  '''
+
+  imgType = type(img[0,0])
+  imgDim = np.shape(img)
+    
+  #newImg = np.zeros([imgDim[0]-2*padding, imgDim[1]-2*padding])
+  newImg = img[padding:-padding,padding:-padding]
+  newImg = newImg.astype(imgType)
+    
+  return newImg
+
+def PasteFilter(img, filt):
+  '''
+  function to paste the filter in the upper left region of the img 
+  to make sure they are scaled correctly
+  '''
+    
+  myImg = img.copy()
+  filtDim = np.shape(filt)
+  myImg[:filtDim[0],:filtDim[1]] = filt
+    
+  return myImg
