@@ -377,6 +377,18 @@ def GenerateLongFilter(filterRoot, twoSarcLengthDict, filterTwoSarcLength=24):
   avgImg /= np.max(avgImg)
   return avgImg
 
+def GenerateLossFilter(LossFilterName, scale):
+  '''
+  routine to generate the loss filter used in the myocyte filtering routines.
+  '''
+  lossFilter = cv2.imread(LossFilterName)
+  gray = cv2.cvtColor(lossFilter, cv2.COLOR_BGR2GRAY)
+  resized = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC).astype('float')
+  resized /= np.max(resized)
+  resized = 1 - resized
+  resized[resized < 0.3] = 0
+  return resized
+
 def PadWithZeros(img, padding = 15):
   '''
   routine to pad your image with a border of zeros. This reduces the 
