@@ -45,14 +45,19 @@ def correlateThresher(myImg, myFilter1,  #cropper=[25,125,25,125],
                       printer = True, filterMode=None,label=None,
                       useFilterInv=False,
                       scale = 1.2,  # for rescaling penalty filter 
-                      sigma_n=1.,threshold=None):
+                      sigma_n=1.,threshold=None,
+                      doCLAHE=True):
     # Store all 'hits' at each angle 
     correlated = []
 
     # Ryan ?? equalized image?
-    clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
-    cl1 = clahe99.apply(myImg)
-    adapt99 = cl1
+    # Dylan - Adding in option to turn off CLAHE
+    if doCLAHE:
+      clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
+      cl1 = clahe99.apply(myImg)
+      adapt99 = cl1
+    else:
+      adapt99 = myImg
 
     filterRef = util.renorm(np.array(myFilter1,dtype=float),scale=1.)
 

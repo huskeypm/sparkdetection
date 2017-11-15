@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pylab as plt 
 
 
-def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,filterMode=None,useFilterInv=False,scale=1.):
+def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,filterMode=None,useFilterInv=False,scale=1.,doCLAHE=True):
   # store
   result = empty()
   result.threshold = threshold
@@ -26,7 +26,8 @@ def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,
      scale=scale,
      filterMode=filterMode,
      useFilterInv=useFilterInv,
-     label=label)
+     label=label,
+     doCLAHE=doCLAHE)
 
   # 
   snrs = [] 
