@@ -182,42 +182,60 @@ def CalcSNR(signalResponse,sigma_n=1):
 import util 
 import util2
 def StackHits(correlated,threshold,iters,
-              display=False,rescaleCorr=False,doKMeans=True):
+              display=False,rescaleCorr=False,doKMeans=True,
+              filterType="Pore"):
     maskList = []
 
     for i, iteration in enumerate(iters):
-        #print "iter", iteration
-        #maskList.append(makeMask(threshold,'fusedCorrelated_Not_rotated_back{}.png'.format(iteration)))
+        if filterType == "Pore":
+          #print "iter", iteration
+          #maskList.append(makeMask(threshold,'fusedCorrelated_Not_rotated_back{}.png'.format(iteration)))
 
-        # RYAN
-        #maskList.append((util2.rotater(util2.makeMask(threshold,imgName='fusedCorrelated_{}.png'.format(iteration)),iteration)))
-        #imgName='fusedCorrelated_{}.png'.format(iteration)
-        #daMask = util2.makeMask(threshold,imgName=imgName)
+          # RYAN
+          #maskList.append((util2.rotater(util2.makeMask(threshold,imgName='fusedCorrelated_{}.png'.format(iteration)),iteration)))
+          #imgName='fusedCorrelated_{}.png'.format(iteration)
+          #daMask = util2.makeMask(threshold,imgName=imgName)
 
-        # Ryan - I don't think this renormalization is appropriate
-        # as it will artificially inflate 'bad' correlation hits
-        corr_i = correlated[i].corr           
-        if rescaleCorr:
-           img =  util.renorm(corr_i)
-        else: 
-           img=corr_i
-        #print img
+          # Ryan - I don't think this renormalization is appropriate
+          # as it will artificially inflate 'bad' correlation hits
+          corr_i = correlated[i].corr           
+          if rescaleCorr:
+             img =  util.renorm(corr_i)
+          else: 
+             img=corr_i
+          #print img
 
-        # routine for identifying 'unique' hits
-        #performed on 'yP' images 
-        daMask = util2.makeMask(threshold,img = img,doKMeans=doKMeans)
-        if display:
-          plt.figure()
-          plt.subplot(1,2,1)
-          plt.imshow(img)            
-          plt.subplot(1,2,2)
-          plt.imshow(daMask)
+          # routine for identifying 'unique' hits
+          #performed on 'yP' images 
+          daMask = util2.makeMask(threshold,img = img,doKMeans=doKMeans)
+          if display:
+            plt.figure()
+            plt.subplot(1,2,1)
+            plt.imshow(img)            
+            plt.subplot(1,2,2)
+            plt.imshow(daMask)
 
-        # i don't think this should be rotated 
-        #maskList.append((util2.rotater(daMask,iteration)))
-        maskList.append(daMask)
-    #print maskList
+          # i don't think this should be rotated 
+          #maskList.append((util2.rotater(daMask,iteration)))
+          maskList.append(daMask)
+      #print maskList
 
+        elif filterType == "TT":
+          corr_i_WT = correlated[i].WT
+          corr_i_Long = correlated[i].Long
+          corr_i_Loss = correlated[i].Loss
+
+          WT_Mask = util2.makeMask(threshold['WT'], img=img, doKMeans=doKMeans)
+          if display:
+            plt.figure()
+            plt.subplot(1,2,1)
+            plt.imshow(img)
+            plt.subplot(1,2,2)
+            plt.imshow(WT_Mask)
+            plt.title('WT')
+          # make Longitudinal and Loss subroutines too.
+
+ 
     myList  = np.sum(maskList, axis =0)
     if display: 
       plt.figure()
@@ -272,3 +290,74 @@ def doLabel(result,dx=10):
     plt.tight_layout()
     
     return labeled
+
+def WT_SNR(Img, WTfilter, WTPunishmentFilter,C,gamma):
+  # calculates SNR of WT filter
+  
+  # get two responses
+  h = mF.matchedFilter(Img, WTfilter, demean=False)
+  h_star = mF.matchedFilter(Img,WTPunishmentFilter,demean=False)
+  
+  # calculate SNR
+  SNR = h / (C + gamma * h_star)
+
+  return SNR
+
+def correlateThresherTT (Img, filterDict, iters=[-10,0,10],
+             printer=False, label=None, scale=1.0, sigma_n=1.,
+             #WTthreshold=None, LossThreshold=None, LongitudinalThreshold=None,
+             doCLAHE=True, covarianceM=None, gamma=1.):
+  # similar to correlateThresher but I want to do all mFing with all filters at once
+
+  # setting parameters for SNR of WT
+  if covarianceM == None:
+    covarianceM = np.ones_like(Img)
+
+  if doCLAHE:
+    clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
+    cl1 = clahe99.apply(Img)
+    adapt99 = cl1
+  else:
+    adapt99 = Img
+  for i, val in enumerate(iters):
+    result = empty()
+    # copy of original image
+    tN = util.renorm(np.array(adapt99,dtype=float),scale=1.)
+
+    ## WT filter and WT punishment filter
+    # pad/rotate
+    rotWT = PadRotate(filterDict['WT'].copy(), val)
+    rotWTPunish = PadRotate(filterDict['WTPunishmentFilter'].copy(),val)
+    # Calculate SNR of WT Response
+    rotWT_SNR = WT_SNR(tN, rotWT, rotWTPunish, covarianceM, gamma)
+
+    ## Longitudinal Filter and Response - still basic here
+    # pad/rotate
+    rotLong = PadRotate(filterDict['Long'].copy(), val)
+    # matched filtering
+    rotLongmF = mF.matchedFilter(tN, rotLong, demean=False)
+
+    ## Loss Filter and Response - still basic
+    # pad/rotate
+    rotLoss = PadRotate(filterDict['Loss'].copy(),val)
+    # matched filtering
+    rotLossmF = mF.matchedFilter(tN, rotLoss, demean=False)
+
+    # storing results for each function
+    result.WT = rotWT_SNR
+    result.Long = rotLongmF
+    result.Loss = rotLossmF
+
+    correlated.append(result)
+
+  return correlated
+    
+    
+
+
+
+
+
+
+
+

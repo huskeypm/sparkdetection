@@ -13,35 +13,50 @@ import numpy as np
 import matplotlib.pylab as plt 
 
 
-def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,label=None,filterMode=None,useFilterInv=False,scale=1.,doCLAHE=True):
+def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,
+                 label=None,filterMode=None,useFilterInv=False,scale=1.,
+                 doCLAHE=True,filterType="Pore"):
+
   # store
   result = empty()
+  # difference for TT routines these are now dictionaries
   result.threshold = threshold
   result.mf= mf
 
-  # do correlations across all iter
-  result.correlated = painter.correlateThresher(
-     dataSet,result.mf, threshold = result.threshold, iters=iters,
-     printer=display,sigma_n=sigma_n,
-     scale=scale,
-     filterMode=filterMode,
-     useFilterInv=useFilterInv,
-     label=label,
-     doCLAHE=doCLAHE)
+  if filterType == "Pore":
+    # do correlations across all iter
+    result.correlated = painter.correlateThresher(
+       dataSet,result.mf, threshold = result.threshold, iters=iters,
+       printer=display,sigma_n=sigma_n,
+       scale=scale,
+       filterMode=filterMode,
+       useFilterInv=useFilterInv,
+       label=label,
+       doCLAHE=doCLAHE)
 
-  # 
-  snrs = [] 
-  for i, resulti in enumerate(result.correlated):
-    maxSNR = np.max( resulti.snr) 
-    snrs.append( maxSNR )              
-  result.snrs = np.array( snrs)
-  result.iters = iters 
+    # 
+    snrs = [] 
+    for i, resulti in enumerate(result.correlated):
+      maxSNR = np.max( resulti.snr) 
+      snrs.append( maxSNR )              
+    result.snrs = np.array( snrs)
+    result.iters = iters 
   
-  # stack hits to form 'total field' of hits
-  result.stackedHits = painter.StackHits(
-    result.correlated,result.threshold,iters,doKMeans=False, display=False)#,display=display)
+    # stack hits to form 'total field' of hits
+    result.stackedHits = painter.StackHits(
+      result.correlated,result.threshold,iters,doKMeans=False, display=False)#,display=display)
     
-  return result
+    return result
+
+  elif filterType == "TT":
+    result.correlated = painter.correlateThresherTT(
+       dataSet,result.mF, threshold=result.threshold)
+    # finish fleshing this out
+
+    # stack filter hits
+    #result.stackedHits = painter.StackHits(
+
+    
 
 
 def GetHits(aboveThresholdPoints):
@@ -118,34 +133,74 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                 iters = [0,10,20,30,40,50,60,70,80,90], 
                 scale=1.0,      
                 useFilterInv=False,
-                label="test"):       
+                label="test",
+                filterType="Pore"):       
 
+    if filterType == "Pore":
+      # load data against which filters are tested
+      testData = cv2.imread(testDataName)
+      testData = cv2.cvtColor(testData, cv2.COLOR_BGR2GRAY)
     
-    # load data against which filters are tested
-    testData = cv2.imread(testDataName)
-    testData = cv2.cvtColor(testData, cv2.COLOR_BGR2GRAY)
-    if isinstance(subsection, (list, tuple, np.ndarray)): 
-      testData = testData[subsection[0]:subsection[1],subsection[2]:subsection[3]]
+      if isinstance(subsection, (list, tuple, np.ndarray)): 
+        testData = testData[subsection[0]:subsection[1],subsection[2]:subsection[3]]
 
-    # load fused filter
-    fusedFilter = cv2.imread(fusedFilterName)
-    fusedFilter = cv2.cvtColor(fusedFilter, cv2.COLOR_BGR2GRAY)
+      # load fused filter
+      fusedFilter = cv2.imread(fusedFilterName)
+      fusedFilter = cv2.cvtColor(fusedFilter, cv2.COLOR_BGR2GRAY)
 
-    # load bulk filter 
-    bulkFilter = cv2.imread(bulkFilterName)
-    bulkFilter = cv2.cvtColor(bulkFilter, cv2.COLOR_BGR2GRAY)
-    #unitBulk = fusedReal[305:327,318:358]
+      # load bulk filter 
+      bulkFilter = cv2.imread(bulkFilterName)
+      bulkFilter = cv2.cvtColor(bulkFilter, cv2.COLOR_BGR2GRAY)
 
-    fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,
-                                   iters,display=display,sigma_n=sigma_n,
-                                   filterMode="fused",label=label,
-                                   scale=scale,
-                                   useFilterInv=useFilterInv)
-    bulkPoreResult = DetectFilter( testData,bulkFilter,bulkThresh,
-                                   iters,display=display,sigma_n=sigma_n,
-                                   filterMode="bulk",label=label,
-                                   scale=scale,
-                                   useFilterInv=useFilterInv)
+
+      fusedPoreResult = DetectFilter(testData,fusedFilter,fusedThresh,
+                                     iters,display=display,sigma_n=sigma_n,
+                                     filterMode="fused",label=label,
+                                     scale=scale,
+                                     useFilterInv=useFilterInv)
+      bulkPoreResult = DetectFilter( testData,bulkFilter,bulkThresh,
+                                     iters,display=display,sigma_n=sigma_n,
+                                     filterMode="bulk",label=label,
+                                     scale=scale,
+                                     useFilterInv=useFilterInv)
+
+      if colorHitsOutName!=None: 
+        colorHits(testData,
+                red=bulkPoreResult.stackedHits,
+                green=fusedPoreResult.stackedHits,
+                label=label,
+                outName=colorHitsOutName)                       
+
+      return fusedPoreResult, bulkPoreResult 
+
+    elif filterType == "TT":
+     # really ugly adaptation but I'm storing both loss and longitudinal filters in fusedFilterName
+     # WTfilter and WT punishment filter in bulkFilterName
+     WTfilter = bulkFilterName['WT']
+     WTpunishment = bulkFilterName['WTPunishmentFilter']
+     Lossfilter = fusedFilterName['Loss']
+     Longfilter = fusedFilterName['Longitudinal']
+
+     # utilizing runner functions in other scripts to produce stacked images
+     WThits, Longhits, Losshits = DetectFilterTT()
+
+
+      if colorHitsOutName!=None: 
+        colorHits(testData,
+                red=bulkPoreResult.stackedHits,
+                green=fusedPoreResult.stackedHits,
+                label=label,
+                outName=colorHitsOutName)                       
+
+      return fusedPoreResult, bulkPoreResult 
+      
+    elif filterType == "TT":
+      tne = 10 # placeholder
+      fusedPoreResult = TTFunc # longitudinal filtering
+
+    else:
+      raise RuntimeError, "Filtering type not understood"
+
     if colorHitsOutName!=None: 
       colorHits(testData,
               red=bulkPoreResult.stackedHits,
