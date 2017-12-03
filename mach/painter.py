@@ -226,14 +226,24 @@ def StackHits(correlated,threshold,iters,
           corr_i_Loss = correlated[i].Loss
 
           WT_Mask = util2.makeMask(threshold['WT'], img=img, doKMeans=doKMeans)
+          Long_Mask = util2.makeMask(threshold['Longitudinal'], img=img, doKMeans=doKMeans)
+          Loss_Mask = util2.makeMask(threshold['Loss'], img=img, doKMeans=doKMeans)
           if display:
+            #WT
             plt.figure()
             plt.subplot(1,2,1)
             plt.imshow(img)
             plt.subplot(1,2,2)
             plt.imshow(WT_Mask)
             plt.title('WT')
-          # make Longitudinal and Loss subroutines too.
+            # Longituindal
+            plt.subplot(2,2,1)
+            plt.imshow(Long_Mask)
+            plt.title('Longitudinal')
+            # Loss
+            plt.subplot(2,2,2)
+            plt.imshow(Loss_Mask)
+            plt.title('Loss')
 
  
     myList  = np.sum(maskList, axis =0)
@@ -313,12 +323,15 @@ def correlateThresherTT (Img, filterDict, iters=[-10,0,10],
   if covarianceM == None:
     covarianceM = np.ones_like(Img)
 
+  correlated = []
+
   if doCLAHE:
     clahe99 = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16,16))
     cl1 = clahe99.apply(Img)
     adapt99 = cl1
   else:
     adapt99 = Img
+  print iters
   for i, val in enumerate(iters):
     result = empty()
     # copy of original image
@@ -327,13 +340,13 @@ def correlateThresherTT (Img, filterDict, iters=[-10,0,10],
     ## WT filter and WT punishment filter
     # pad/rotate
     rotWT = PadRotate(filterDict['WT'].copy(), val)
-    rotWTPunish = PadRotate(filterDict['WTPunishmentFilter'].copy(),val)
+    rotWTPunish = PadRotate(filterDict['WTPunishFilter'].copy(),val)
     # Calculate SNR of WT Response
     rotWT_SNR = WT_SNR(tN, rotWT, rotWTPunish, covarianceM, gamma)
 
     ## Longitudinal Filter and Response - still basic here
     # pad/rotate
-    rotLong = PadRotate(filterDict['Long'].copy(), val)
+    rotLong = PadRotate(filterDict['Longitudinal'].copy(), val)
     # matched filtering
     rotLongmF = mF.matchedFilter(tN, rotLong, demean=False)
 
