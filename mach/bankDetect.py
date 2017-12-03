@@ -174,15 +174,15 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
       return fusedPoreResult, bulkPoreResult 
 
     elif filterType == "TT":
-     # really ugly adaptation but I'm storing both loss and longitudinal filters in fusedFilterName
-     # WTfilter and WT punishment filter in bulkFilterName
-     WTfilter = bulkFilterName['WT']
-     WTpunishment = bulkFilterName['WTPunishmentFilter']
-     Lossfilter = fusedFilterName['Loss']
-     Longfilter = fusedFilterName['Longitudinal']
+      # really ugly adaptation but I'm storing both loss and longitudinal filters in fusedFilterName
+      # WTfilter and WT punishment filter in bulkFilterName
+      WTfilter = bulkFilterName['WT']
+      WTpunishment = bulkFilterName['WTPunishFilter']
+      Lossfilter = fusedFilterName['Loss']
+      Longfilter = fusedFilterName['Longitudinal']
 
-     # utilizing runner functions in other scripts to produce stacked images
-     WThits, Longhits, Losshits = DetectFilterTT()
+      # utilizing runner functions in other scripts to produce stacked images
+      WThits, Longhits, Losshits = DetectFilterTT()
 
 
       if colorHitsOutName!=None: 
@@ -192,11 +192,8 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                 label=label,
                 outName=colorHitsOutName)                       
 
-      return fusedPoreResult, bulkPoreResult 
+        return fusedPoreResult, bulkPoreResult 
       
-    elif filterType == "TT":
-      tne = 10 # placeholder
-      fusedPoreResult = TTFunc # longitudinal filtering
 
     else:
       raise RuntimeError, "Filtering type not understood"
