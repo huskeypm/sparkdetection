@@ -185,8 +185,13 @@ def StackHits(correlated,threshold,iters,
               display=False,rescaleCorr=False,doKMeans=True,
               filterType="Pore"):
     maskList = []
+    WTlist = []
+    Longlist = []
+    Losslist = []
+
 
     for i, iteration in enumerate(iters):
+        #print i, iteration
         if filterType == "Pore":
           #print "iter", iteration
           #maskList.append(makeMask(threshold,'fusedCorrelated_Not_rotated_back{}.png'.format(iteration)))
@@ -221,37 +226,50 @@ def StackHits(correlated,threshold,iters,
       #print maskList
 
         elif filterType == "TT":
+          masks = empty()
           corr_i_WT = correlated[i].WT
           corr_i_Long = correlated[i].Long
           corr_i_Loss = correlated[i].Loss
 
-          WT_Mask = util2.makeMask(threshold['WT'], img=img, doKMeans=doKMeans)
-          Long_Mask = util2.makeMask(threshold['Longitudinal'], img=img, doKMeans=doKMeans)
-          Loss_Mask = util2.makeMask(threshold['Loss'], img=img, doKMeans=doKMeans)
+          masks.WT = util2.makeMask(threshold['WT'], img=corr_i_WT, doKMeans=doKMeans)
+          masks.Long = util2.makeMask(threshold['Longitudinal'], img=corr_i_Long, doKMeans=doKMeans)
+          masks.Loss = util2.makeMask(threshold['Loss'], img=corr_i_Loss, doKMeans=doKMeans,inverseThresh=True)
           if display:
             #WT
             plt.figure()
-            plt.subplot(1,2,1)
-            plt.imshow(img)
-            plt.subplot(1,2,2)
-            plt.imshow(WT_Mask)
+            #plt.subplot(1,1)
+            #plt.imshow(img)
+            plt.subplot(1,3,1)
+            plt.imshow(masks.WT)
             plt.title('WT')
             # Longituindal
-            plt.subplot(2,2,1)
-            plt.imshow(Long_Mask)
+            plt.subplot(1,3,2)
+            plt.imshow(masks.Long)
             plt.title('Longitudinal')
             # Loss
-            plt.subplot(2,2,2)
-            plt.imshow(Loss_Mask)
+            plt.subplot(1,3,3)
+            plt.imshow(masks.Loss)
             plt.title('Loss')
 
+          WTlist.append(masks.WT)
+          Longlist.append(masks.Long)
+          Losslist.append(masks.Loss)
+
  
-    myList  = np.sum(maskList, axis =0)
-    if display: 
+    if filterType == "Pore":
+      myList  = np.sum(maskList, axis =0)
+      return myList 
+
+    elif filterType == "TT":
+      stacked = empty()
+      stacked.WT = np.sum(WTlist,axis=0)
+      stacked.Long = np.sum(Longlist,axis=0)
+      stacked.Loss = np.sum(Losslist,axis=0)
+      return stacked
+   
+    if display and filterType == "Pore": 
       plt.figure()
       plt.imshow(myList)
-    return myList
-
 
 
 
@@ -316,8 +334,14 @@ def WT_SNR(Img, WTfilter, WTPunishmentFilter,C,gamma):
 def correlateThresherTT (Img, filterDict, iters=[-10,0,10],
              printer=False, label=None, scale=1.0, sigma_n=1.,
              #WTthreshold=None, LossThreshold=None, LongitudinalThreshold=None,
+             thresholdDict=None,
              doCLAHE=True, covarianceM=None, gamma=1.):
   # similar to correlateThresher but I want to do all mFing with all filters at once
+
+  # find max response of each of the filters
+  maxResponses = {}
+  for name,filt in filterDict.iteritems():
+    maxResponses[name] = np.sum(filt)
 
   # setting parameters for SNR of WT
   if covarianceM == None:
@@ -343,18 +367,21 @@ def correlateThresherTT (Img, filterDict, iters=[-10,0,10],
     rotWTPunish = PadRotate(filterDict['WTPunishFilter'].copy(),val)
     # Calculate SNR of WT Response
     rotWT_SNR = WT_SNR(tN, rotWT, rotWTPunish, covarianceM, gamma)
+    rotWT_SNR /= maxResponses['WT']
 
     ## Longitudinal Filter and Response - still basic here
     # pad/rotate
     rotLong = PadRotate(filterDict['Longitudinal'].copy(), val)
     # matched filtering
     rotLongmF = mF.matchedFilter(tN, rotLong, demean=False)
+    rotLongmF /= maxResponses['Longitudinal']
 
     ## Loss Filter and Response - still basic
     # pad/rotate
     rotLoss = PadRotate(filterDict['Loss'].copy(),val)
     # matched filtering
     rotLossmF = mF.matchedFilter(tN, rotLoss, demean=False)
+    rotLossmF /= maxResponses['Loss']
 
     # storing results for each function
     result.WT = rotWT_SNR

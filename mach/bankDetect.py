@@ -46,15 +46,15 @@ def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,
     result.stackedHits = painter.StackHits(
       result.correlated,result.threshold,iters,doKMeans=False, display=False)#,display=display)
     
-    return result
-
   elif filterType == "TT":
     result.correlated = painter.correlateThresherTT(
-       dataSet,result.mF, threshold=result.threshold)
-    # finish fleshing this out
+       dataSet,result.mf, thresholdDict=result.threshold,iters=iters,doCLAHE=doCLAHE)
 
     # stack filter hits
-    #result.stackedHits = painter.StackHits(
+    result.stackedHits = painter.StackHits(result.correlated,threshold,iters,display=display,doKMeans=False,
+                                           filterType="TT")
+  
+  return result
 
     
 
@@ -134,7 +134,9 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                 scale=1.0,      
                 useFilterInv=False,
                 label="test",
-                filterType="Pore"):       
+                filterType="Pore",
+                filterDict=None, thresholdDict=None,
+                doCLAHE=True):       
 
     if filterType == "Pore":
       # load data against which filters are tested
@@ -176,36 +178,26 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
     elif filterType == "TT":
       # really ugly adaptation but I'm storing both loss and longitudinal filters in fusedFilterName
       # WTfilter and WT punishment filter in bulkFilterName
-      WTfilter = bulkFilterName['WT']
-      WTpunishment = bulkFilterName['WTPunishFilter']
-      Lossfilter = fusedFilterName['Loss']
-      Longfilter = fusedFilterName['Longitudinal']
+      #WTfilter = bulkFilterName['WT']
+      #WTpunishment = bulkFilterName['WTPunishFilter']
+      #Lossfilter = fusedFilterName['Loss']
+      #Longfilter = fusedFilterName['Longitudinal']
 
-      # utilizing runner functions in other scripts to produce stacked images
-      WThits, Longhits, Losshits = DetectFilterTT()
+      # utilizing runner functions to produce stacked images
+      resultContainer = DetectFilter(testDataName,filterDict,thresholdDict,iters,display=display,sigma_n=sigma_n,
+                                     filterType="TT",doCLAHE=doCLAHE)
 
+      if colorHitsOutName != None:
+        colorImg = testDataName * 255
+        colorImg = colorImg.astype('uint8')
+        colorHits(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
+                  #blue=resultContainer.stackedHits.Loss,
+                  label=label,outName=colorHitsOutName)
 
-      if colorHitsOutName!=None: 
-        colorHits(testData,
-                red=bulkPoreResult.stackedHits,
-                green=fusedPoreResult.stackedHits,
-                label=label,
-                outName=colorHitsOutName)                       
-
-        return fusedPoreResult, bulkPoreResult 
-      
+      return resultContainer
 
     else:
       raise RuntimeError, "Filtering type not understood"
-
-    if colorHitsOutName!=None: 
-      colorHits(testData,
-              red=bulkPoreResult.stackedHits,
-              green=fusedPoreResult.stackedHits,
-              label=label,
-              outName=colorHitsOutName)                       
-
-    return fusedPoreResult, bulkPoreResult 
 
 
 def TestTrueData():

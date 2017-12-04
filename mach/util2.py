@@ -82,7 +82,8 @@ def buildBox(dims, filterType = 'fused'):
 def makeMask(threshold = 245, 
              img=None,imgName=None,
              doKMeans = True,
-             K = 4  # Ryan what is this parameter? 
+             K = 4,  # Ryan what is this parameter? 
+             inverseThresh=False
              ):
     # test if numpy array
     if isinstance(img, (list, tuple, np.ndarray)): 
@@ -100,8 +101,12 @@ def makeMask(threshold = 245,
     corr = np.copy(correlated.flatten())
     masker = (np.zeros_like(corr))
     #print 'masker', np.shape(masker)
-    pts =np.argwhere(corr>threshold)
-    masker[pts] = corr[pts]
+    if inverseThresh == False:
+      pts =np.argwhere(corr>threshold)
+      masker[pts] = corr[pts]
+    else:
+      pts =np.argwhere(corr<threshold)
+      masker[pts] = 1.
     #print np.shape(masker) 
     newmasker= np.reshape(masker,imgDim)            
     #print np.shape(newmasker) 
