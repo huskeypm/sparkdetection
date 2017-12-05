@@ -92,7 +92,7 @@ def ColorChannel(Img,stackedHits,chIdx=0):
 
 # red - entries where hits are to be colored (same size as rawOrig)
 # will label in rawOrig detects in the 'red' channel as red, etc 
-def colorHits(rawOrig,red=None,green=None,outName=None,label=""):
+def colorHits(rawOrig,red=None,green=None,outName=None,label="",plotMe=True):
   dims = np.shape(rawOrig)  
   
   # make RGB version of data   
@@ -108,18 +108,20 @@ def colorHits(rawOrig,red=None,green=None,outName=None,label=""):
     ColorChannel(Img,red,chIdx=0)
   if isinstance(green, (list, tuple, np.ndarray)): 
     ColorChannel(Img,green,chIdx=1)    
-    
-  plt.figure()  
-  plt.subplot(1,2,1)
-  plt.title("Raw data (%s)"%label)
-  plt.imshow(rawOrig,cmap='gray')
-  plt.subplot(1,2,2)
-  plt.title("Marked") 
-  plt.imshow(Img)  
+
+  if plotMe:
+    plt.figure()  
+    plt.subplot(1,2,1)
+    plt.title("Raw data (%s)"%label)
+    plt.imshow(rawOrig,cmap='gray')
+    plt.subplot(1,2,2)
+    plt.title("Marked") 
+    plt.imshow(Img)  
   if outName!=None:
     plt.tight_layout()
     plt.gcf().savefig(outName,dpi=300)
-    
+  else:
+    return Img  
 
 
 # main engine 
@@ -136,7 +138,7 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                 label="test",
                 filterType="Pore",
                 filterDict=None, thresholdDict=None,
-                doCLAHE=True):       
+                doCLAHE=True,saveColoredFig=True):       
 
     if filterType == "Pore":
       # load data against which filters are tested
@@ -187,12 +189,17 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
       resultContainer = DetectFilter(testDataName,filterDict,thresholdDict,iters,display=display,sigma_n=sigma_n,
                                      filterType="TT",doCLAHE=doCLAHE)
 
-      if colorHitsOutName != None:
+      if colorHitsOutName != None and saveColoredFig:
         colorImg = testDataName * 255
         colorImg = colorImg.astype('uint8')
         colorHits(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
                   #blue=resultContainer.stackedHits.Loss,
                   label=label,outName=colorHitsOutName)
+      elif colorHitsOutName != None and not saveColoredFig:
+        colorImg = testDataName * 255
+        colorImg = colorImg.astype('uint8')
+        resultContainer.coloredImg = colorHits(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
+                                               label=label,outName=None, plotMe=False)
 
       return resultContainer
 
