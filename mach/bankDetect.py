@@ -138,7 +138,8 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                 label="test",
                 filterType="Pore",
                 filterDict=None, thresholdDict=None,
-                doCLAHE=True,saveColoredFig=True):       
+                doCLAHE=True,saveColoredFig=True,
+                gamma=3.):       
 
     if filterType == "Pore":
       # load data against which filters are tested
@@ -196,8 +197,13 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                   #blue=resultContainer.stackedHits.Loss,
                   label=label,outName=colorHitsOutName)
       elif colorHitsOutName != None and not saveColoredFig:
-        colorImg = testDataName * 255
-        colorImg = colorImg.astype('uint8')
+        #plt.imshow(testDataName)
+        #plt.colorbar()
+        #colorImg = testDataName * 255
+        #colorImg = colorImg.astype('uint8')
+        #plt.figure()
+        #plt.imshow(colorImg)
+        colorImg = testDataName
         resultContainer.coloredImg = colorHits(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
                                                label=label,outName=None, plotMe=False)
 
