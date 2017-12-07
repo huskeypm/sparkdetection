@@ -355,7 +355,7 @@ def correlateThresherTT (Img, filterDict, iters=[-10,0,10],
     adapt99 = cl1
   else:
     adapt99 = Img
-  print iters
+  #print iters
   for i, val in enumerate(iters):
     result = empty()
     # copy of original image
