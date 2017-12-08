@@ -194,7 +194,7 @@ if __name__=="__main__":
   msg=helpmsg()
   remap = "none"
 
-  if len(sys.argv) != 4:
+  if len(sys.argv) != 5:
       raise RuntimeError(msg)
 
   ### PARAMS 
@@ -211,4 +211,21 @@ if __name__=="__main__":
   Longitudinalthresh = sys.argv[3]
   gamma = sys.argv[4]
   result = gimmeStackedHits(imgName, WTthresh, Longitudinalthresh, gamma)
+  print np.shape(result) 
+
+  #,cv2.imwrite("dogs.png",result) 
+  # MIGHT NOT NEED THIS 
+  rawOrig = result 
+  dims = np.shape(rawOrig)
+
+  # make RGB version of data   
+  Img = np.zeros([dims[0],dims[1],3],dtype=np.uint8)
+  Img[:,:,0] = rawOrig[:,:,0]    
+  Img[:,:,1] = rawOrig[:,:,1] #125              
+  Img[:,:,2] = rawOrig[:,:,2]    
+
+  import matplotlib.pylab as plt
+  plt.imshow(Img)      
+  plt.gcf().savefig("asdf.png") 
+
   print 'successful!'
