@@ -82,7 +82,7 @@ plotFilters = False
 plotRawFilterResponse = False # MAKE SURE THIS IS OFF FOR LARGE DATA SIZES
 
 # main function
-def gimmeStackedHits(imgName, WTthreshold, Longitudinalthreshold, gamma):
+def gimmeStackedHits(imgName, WTthreshold, Longitudinalthreshold, gamma,returnMasks=False):
   # Read Images and Apply Masks
 
   # using old code structure
@@ -169,8 +169,10 @@ def gimmeStackedHits(imgName, WTthreshold, Longitudinalthreshold, gamma):
                               label=imgName,
                               saveColoredFig=False,
                               gamma=gamma)
-
-  return Result.coloredImg
+  if not returnMasks:
+    return Result.coloredImg
+  else:
+    return Result.coloredImg[:,:,0],Result.coloredImg[:,:,1],Result.coloredImg[:,:,2]
 
 # Message printed when program run without arguments 
 def helpmsg():
@@ -194,20 +196,35 @@ if __name__=="__main__":
   msg=helpmsg()
   remap = "none"
 
-  if len(sys.argv) != 5:
+  if len(sys.argv) < 5:
       raise RuntimeError(msg)
 
 
   imgName = str(sys.argv[1])
-  WTthresh = float(sys.argv[2])
-  Longitudinalthresh = float(sys.argv[3])
-  gamma = sys.argv[4]
-  result = gimmeStackedHits(imgName, WTthresh, Longitudinalthresh, gamma)
-  import matplotlib.pylab as plt
-  corr = imgName.split('/')[-1]
-  name,filetype = corr.split('.')
-  myName = name+'_'+str(WTthresh)+'_'+str(Longitudinalthresh)+'_'+str(gamma)+filetype
-  plt.imshow(result)
-  plt.gcf().savefig(myName) 
+  if sys.argv[2] != "-masks":
+    WTthresh = float(sys.argv[2])
+    Longitudinalthresh = float(sys.argv[3])
+    gamma = float(sys.argv[4])
+    result = gimmeStackedHits(imgName, WTthresh, Longitudinalthresh, gamma)
+    import matplotlib.pylab as plt
+    corr = imgName.split('/')[-1]
+    name,filetype = corr.split('.')
+    myName = name+'_'+str(WTthresh)+'_'+str(Longitudinalthresh)+'_'+str(gamma)+'.'+filetype
+    plt.imshow(result)
+    plt.gcf().savefig(myName) 
 
-  #print 'successful!'
+  else:
+    WTthresh = float(sys.argv[3])
+    Longitudinalthresh = float(sys.argv[4])
+    gamma = float(sys.argv[5])
+    # this returns the masks individually instead of stacked together
+    origMask,LongMask,WTMask = gimmeStackedHits(imgName, WTthresh, Longitudinalthresh,gamma,returnMasks=True)
+    corr = imgName.split('/')[-1]
+    name,filetype = corr.split('.')
+    myName = name+'_'+str(WTthresh)+'_'+str(Longitudinalthresh)+'_'+str(gamma)
+    import matplotlib.pylab as plt
+    plt.imshow(WTMask)
+    plt.gcf().savefig(myName+'_WTMask'+'.'+filetype)
+    plt.figure()
+    plt.imshow(LongMask)
+    plt.gcf().savefig(myName+'_LongMask'+'.'+filetype)
