@@ -197,35 +197,17 @@ if __name__=="__main__":
   if len(sys.argv) != 5:
       raise RuntimeError(msg)
 
-  ### PARAMS 
-#  for i,arg in enumerate(sys.argv):
-#    imgName = 
-
-  ### RUNS
-#  for i,arg in enumerate(sys.argv):
-#    if(arg=="-run"):
 
   imgName = str(sys.argv[1])
-  #print imgName
-  WTthresh = sys.argv[2]
-  Longitudinalthresh = sys.argv[3]
+  WTthresh = float(sys.argv[2])
+  Longitudinalthresh = float(sys.argv[3])
   gamma = sys.argv[4]
   result = gimmeStackedHits(imgName, WTthresh, Longitudinalthresh, gamma)
-  print np.shape(result) 
-
-  #,cv2.imwrite("dogs.png",result) 
-  # MIGHT NOT NEED THIS 
-  rawOrig = result 
-  dims = np.shape(rawOrig)
-
-  # make RGB version of data   
-  Img = np.zeros([dims[0],dims[1],3],dtype=np.uint8)
-  Img[:,:,0] = rawOrig[:,:,0]    
-  Img[:,:,1] = rawOrig[:,:,1] #125              
-  Img[:,:,2] = rawOrig[:,:,2]    
-
   import matplotlib.pylab as plt
-  plt.imshow(Img)      
-  plt.gcf().savefig("asdf.png") 
+  corr = imgName.split('/')[-1]
+  name,filetype = corr.split('.')
+  myName = name+'_'+str(WTthresh)+'_'+str(Longitudinalthresh)+'_'+str(gamma)+filetype
+  plt.imshow(result)
+  plt.gcf().savefig(myName) 
 
-  print 'successful!'
+  #print 'successful!'
