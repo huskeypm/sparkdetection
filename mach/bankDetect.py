@@ -123,11 +123,57 @@ def colorHits(rawOrig,red=None,green=None,outName=None,label="",plotMe=True):
   else:
     return Img  
 
-def colorHitsTT(rawOrig,red=None,green=None,outName=None,label='',plotMe=True):
+def colorHitsTT(rawOrig,LongStacked,WTStacked,iters,outName=None,label='',plotMe=True):
+  # need a function for coloring TT differently than PNP since we are using a heatmap of red v blue
   dims=np.shape(rawOrig)
 
   # make RGB version
   Img = np.zeros([dims[0],dims[1],3],dtype=np.uint8)
+  scale = 0.75
+  Img[:,:,0] = scale * rawOrig
+  Img[:,:,1] = scale * rawOrig
+  Img[:,:,2] = scale * rawOrig
+
+  # mark longitudinal hits without regard to rotation for now (green)
+  # to do this we must modify the LongStacked array
+  LongStacked[np.invert(np.isnan(LongStacked))] = 1
+  LongStacked = np.nan_to_num(LongStacked).astype('uint8')
+  #plt.figure()
+  #plt.imshow(LongStacked)
+  #plt.colorbar()
+  ColorChannel(Img,LongStacked,chIdx=1)
+
+  # mark WT wrt rotation degree via heatmap
+  #leftMostRotationIdx = 0  # mark as red
+  rightMostRotationIdx = len(iters) # mark as blue
+  spacing = 255 / rightMostRotationIdx
+  #print spacing
+
+  for i in range(dims[0]):
+    for j in range(dims[1]):
+      # this contains our rotation degree wrt iters
+      rotArg = WTStacked[i,j]
+      if not np.isnan(rotArg):
+        Img[i,j,0] = int(255 - rotArg*spacing)
+        Img[i,j,2] = int(rotArg*spacing)
+      else: 
+        continue
+  
+  if plotMe:
+    plt.figure()
+    plt.subplot(1,2,1)
+    plt.title("Raw data (%s)"%label)
+    plt.imshow(rawOrig,cmap='gray')
+    plt.subplot(1,2,2)
+    plt.title("Marked")
+    plt.imshow(Img)
+  if outName != None:
+    plt.tight_layout()
+    plt.gcf().savefig(outName,dpi=300)
+  else:
+    return Img
+
+
 # main engine 
 
 def TestFilters(testDataName,fusedFilterName,bulkFilterName,
@@ -196,12 +242,15 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                   label=label,outName=colorHitsOutName)
       elif colorHitsOutName != None and not saveColoredFig:
         colorImg = testDataName
-        # keep in mind when calling this function that red and green are for the matplotlib convention. CV2 spits out red -> blue
-        #resultContainer.coloredImg = colorHits(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
+        # keep in mind when calling this function that red and green are for the matplotlib convention.
+        # CV2 spits out red -> blue
+        #resultContainer.coloredImg = colorHits(colorImg, red=resultContainer.stackedHits.WT,
+        #                                       green=resultContainer.stackedHits.Long,
         #                                       label=label,outName=None, plotMe=False)
         
         # changing since we return the angle at which the maximum response is
-        resultContainer.coloredImg = colorHitsTT(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
+        resultContainer.coloredImg = colorHitsTT(colorImg, resultContainer.stackedHits.Long,
+                                                 resultContainer.stackedHits.WT, iters,
                                                  label=label,outName=None,plotMe=False)
       return resultContainer
 
