@@ -251,6 +251,12 @@ def StackHits(correlated,threshold,iters,
             plt.imshow(masks.Loss)
             plt.title('Loss')
 
+          # changing values to strings that will later be interpreted by colorHits function
+          #colorIndicator = 'rot'+str(i)
+          #masks.WT[masks.WT != 0] = colorIndicator
+          #masks.Long[masks.Long != 0] = colorIndicator
+          # not going to mark Loss in the same way to make code a bit more efficient later
+
           WTlist.append(masks.WT)
           Longlist.append(masks.Long)
           Losslist.append(masks.Loss)
@@ -262,8 +268,27 @@ def StackHits(correlated,threshold,iters,
 
     elif filterType == "TT":
       stacked = empty()
-      stacked.WT = np.sum(WTlist,axis=0)
-      stacked.Long = np.sum(Longlist,axis=0)
+      #stacked.WT = np.sum(WTlist,axis=0)
+      # I hate myself for doing this. Fix it!
+      WTholder = np.argmax(WTlist,axis=0).astype('float')
+      WTdims = np.shape(WTholder)
+      for i in range(WTdims[0]):
+        for j in range(WTdims[1]):
+          if WTlist[int(WTholder[i,j])][i,j] < 0.0001:
+            #print WTholder[i,j]
+            WTholder[i,j] = np.NaN
+      #print WTholder
+      stacked.WT = WTholder
+      
+      #stacked.Long = np.sum(Longlist,axis=0)
+      # same as the WT
+      Longholder = np.argmax(Longlist,axis=0).astype('float')
+      Longdims = np.shape(Longholder)
+      for i in range(Longdims[0]):
+        for j in range(Longdims[1]):
+          if Longlist[int(Longholder[i,j])][i,j] < 0.0001:
+            Longholder[i,j] = np.NaN
+      stacked.Long = Longholder
       stacked.Loss = np.sum(Losslist,axis=0)
       return stacked
    
