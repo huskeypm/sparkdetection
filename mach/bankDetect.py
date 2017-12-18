@@ -123,7 +123,11 @@ def colorHits(rawOrig,red=None,green=None,outName=None,label="",plotMe=True):
   else:
     return Img  
 
+def colorHitsTT(rawOrig,red=None,green=None,outName=None,label='',plotMe=True):
+  dims=np.shape(rawOrig)
 
+  # make RGB version
+  Img = np.zeros([dims[0],dims[1],3],dtype=np.uint8)
 # main engine 
 
 def TestFilters(testDataName,fusedFilterName,bulkFilterName,
@@ -179,34 +183,26 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
       return fusedPoreResult, bulkPoreResult 
 
     elif filterType == "TT":
-      # really ugly adaptation but I'm storing both loss and longitudinal filters in fusedFilterName
-      # WTfilter and WT punishment filter in bulkFilterName
-      #WTfilter = bulkFilterName['WT']
-      #WTpunishment = bulkFilterName['WTPunishFilter']
-      #Lossfilter = fusedFilterName['Loss']
-      #Longfilter = fusedFilterName['Longitudinal']
-
       # utilizing runner functions to produce stacked images
       resultContainer = DetectFilter(testDataName,filterDict,thresholdDict,iters,display=display,sigma_n=sigma_n,
                                      filterType="TT",doCLAHE=doCLAHE)
 
       if colorHitsOutName != None and saveColoredFig:
+        # need to update once I have working code 
         colorImg = testDataName * 255
         colorImg = colorImg.astype('uint8')
         colorHits(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
                   #blue=resultContainer.stackedHits.Loss,
                   label=label,outName=colorHitsOutName)
       elif colorHitsOutName != None and not saveColoredFig:
-        #plt.imshow(testDataName)
-        #plt.colorbar()
-        #colorImg = testDataName * 255
-        #colorImg = colorImg.astype('uint8')
-        #plt.figure()
-        #plt.imshow(colorImg)
         colorImg = testDataName
-        resultContainer.coloredImg = colorHits(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
-                                               label=label,outName=None, plotMe=False)
-
+        # keep in mind when calling this function that red and green are for the matplotlib convention. CV2 spits out red -> blue
+        #resultContainer.coloredImg = colorHits(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
+        #                                       label=label,outName=None, plotMe=False)
+        
+        # changing since we return the angle at which the maximum response is
+        resultContainer.coloredImg = colorHitsTT(colorImg, red=resultContainer.stackedHits.WT, green=resultContainer.stackedHits.Long,
+                                                 label=label,outName=None,plotMe=False)
       return resultContainer
 
     else:
