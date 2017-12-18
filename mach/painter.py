@@ -183,7 +183,7 @@ import util
 import util2
 def StackHits(correlated,threshold,iters,
               display=False,rescaleCorr=False,doKMeans=True,
-              filterType="Pore"):
+              filterType="Pore",returnAngles=False):
     maskList = []
     WTlist = []
     Longlist = []
@@ -268,19 +268,37 @@ def StackHits(correlated,threshold,iters,
 
     elif filterType == "TT":
       stacked = empty()
+      # creating a class that also contains the angle with which the most intense hit was located
+
+      dims = np.shape(WTlist[0]) # all rotations and filter correlations should be the same dimensions
      
-      # creating 'poor mans mask' for WT through using NaN
+      # creating 'poor mans mask' through use of NaN
       WTholder = np.argmax(WTlist,axis=0).astype('float')
       WTholder[WTlist[0] < 0.00001] = np.nan
       stacked.WT = WTholder
-      
-      # same as the WT
       Longholder = np.argmax(Longlist,axis=0).astype('float')
-      Longdims = np.shape(Longholder)
       Longholder[Longlist[0] < 0.00001] = np.nan
       stacked.Long = Longholder
       stacked.Loss = np.sum(Losslist,axis=0)
-      return stacked
+
+      if returnAngles:
+        stackedAngles = empty()
+        WTAngle = WTholder.flatten().astype('float')
+        for i,idx in enumerate(np.invert(np.isnan(WTholder.flatten()))):
+          if idx:
+            WTAngle[i] = iters[int(WTAngle[i])]
+        WTAngle = WTAngle.reshape(dims[0],dims[1])
+        stackedAngles.WT = WTAngle
+
+        LongAngle = Longholder.flatten().astype('float')
+        for i,idx in enumerate(np.invert(np.isnan(Longholder.flatten()))):
+          if idx:
+            LongAngle[i] = iters[int(LongAngle[i])]
+        LongAngle = LongAngle.reshape(dims[0],dims[1])
+        stackedAngles.Long = LongAngle
+      else:
+        stackedAngles = None
+      return stacked, stackedAngles
    
     if display and filterType == "Pore": 
       plt.figure()

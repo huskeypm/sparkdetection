@@ -15,7 +15,7 @@ import matplotlib.pylab as plt
 
 def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,
                  label=None,filterMode=None,useFilterInv=False,scale=1.,
-                 doCLAHE=True,filterType="Pore"):
+                 doCLAHE=True,filterType="Pore",returnAngles=True):
 
   # store
   result = empty()
@@ -51,8 +51,10 @@ def DetectFilter(dataSet,mf,threshold,iters,display=False,sigma_n=1.,
        dataSet,result.mf, thresholdDict=result.threshold,iters=iters,doCLAHE=doCLAHE)
 
     # stack filter hits
-    result.stackedHits = painter.StackHits(result.correlated,threshold,iters,display=display,doKMeans=False,
-                                           filterType="TT")
+    result.stackedHits,result.stackedAngles = painter.StackHits(result.correlated,
+                                                                threshold,iters,display=display,
+                                                                doKMeans=False,
+                                                                filterType="TT",returnAngles=returnAngles)
   
   return result
 
@@ -189,7 +191,8 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                 filterType="Pore",
                 filterDict=None, thresholdDict=None,
                 doCLAHE=True,saveColoredFig=True,
-                gamma=3.):       
+                gamma=3.,
+                returnAngles=True):       
 
     if filterType == "Pore":
       # load data against which filters are tested
@@ -231,7 +234,7 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
     elif filterType == "TT":
       # utilizing runner functions to produce stacked images
       resultContainer = DetectFilter(testDataName,filterDict,thresholdDict,iters,display=display,sigma_n=sigma_n,
-                                     filterType="TT",doCLAHE=doCLAHE)
+                                     filterType="TT",doCLAHE=doCLAHE,returnAngles=returnAngles)
 
       if colorHitsOutName != None and saveColoredFig:
         # need to update once I have working code 
