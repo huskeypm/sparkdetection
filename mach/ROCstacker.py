@@ -1,32 +1,13 @@
-
-# coding: utf-8
-
 # runner function that will be used for ROC generation/optimization
 
 import util
 import cv2
 import numpy as np
-#import matplotlib.pyplot as plt
-#get_ipython().magic(u'matplotlib inline')
-#plt.rcParams['figure.figsize'] = [16,9]
-#get_ipython().magic(u'load_ext autoreload')
-#get_ipython().magic(u'autoreload 2')
 import matchedFilter as mF
-#from mpl_toolkits.axes_grid1 import make_axes_locatable
 import os
-#import scipy.stats
-#import time
 import bankDetect as bD
 import painter
 
-
-# In[91]:
-
-# utility to assist in the rotation of the filters
-import imutils
-
-
-# In[93]:
 
 def ReadResizeNormImg(imgName, scale):
     img = cv2.imread(imgName)
@@ -38,14 +19,14 @@ def ReadResizeNormImg(imgName, scale):
 
 
 # # Pre-Processing
-# 
 # - Rotate myocyte images in gimp s.t. TTs are orthogonal to the x axis
 # - Measure the two sarcomere size of the TTs
+# - use util.preprocessPNG to resize to filter two sarcomere size, renorm, CLAHE
+# - TENTATIVE: crop out extracellular region/sarcolemma and create mask
 
 # # Pass in Arguments
 
-# In[95]:
-
+# example:
 #root = "/home/AD/dfco222/Desktop/LouchData/"
 #imgName = 'Sham_23'
 #fileType = '.png'
@@ -53,26 +34,13 @@ def ReadResizeNormImg(imgName, scale):
 #Longitudinalthreshold = 0.38
 #gamma = 3.
 
-
-# In[106]:
-
 # distance between the middle of one z-line to the second neighbor of that z-line
 filterTwoSarcSize = 25
 
 # designating images used to construct the filters as we won't be testing those
 filterDataImages = []
 
-# designating filter roots and filter names. Opting to test with original filter images for now but will test with filters constructed from this data set shortly
-WTFilterRoot = "./images/filterImgs/WT/"
-
-LongitudinalFilterRoot = "./images/filterImgs/Longitudinal/"
-LongitudinalTwoSarcLengthDict = {"SongWKY_long1":16, "Xie_RV_Control_long2":14, "Xie_RV_Control_long1":16, "Guo2013Fig1C_long1":22}
-
-LossFilterName = "./images/Remodeled_TTs/TT_Idealized_Loss_TruthFilter.png"
-LossFilterTwoSarcSize = 28
-
 # parameters for all the different analysis options
-applyCLAHE = True
 pad = True
 plotRawImages = False
 binarizeImgs = False
@@ -82,67 +50,38 @@ plotFilters = False
 plotRawFilterResponse = False # MAKE SURE THIS IS OFF FOR LARGE DATA SIZES
 
 # main function
-def gimmeStackedHits(imgName, WTthreshold, Longitudinalthreshold, gamma,returnMasks=False):
+def gimmeStackedHits(imgName, WTthreshold, Longitudinalthreshold, gamma,
+                     WTFilterName="./images/WTFilter.png",
+                     LongitudinalFilterName,="./images/LongFilter.png"
+                     LossFilterName="./images/LossFilter.png",
+                     WTPunishFilterName="./images/WTPunishmentFilter.png",
+                     returnMasks=False):
   # Read Images and Apply Masks
 
-  # using old code structure
+  # using old code structure so this dictionary is just arbitrary
   imgTwoSarcSizesDict = {imgName:'Nonsense'}
-
   for imgName,imgTwoSarcSize in imgTwoSarcSizesDict.iteritems():
       if imgName not in filterDataImages:
-          
           scale = 1. # we're resizing prior to this call
+          # additionally tis image is already renormed using util so this is just reading in the image
           img = ReadResizeNormImg(imgName, scale)
           combined = img
-          
-          if applyCLAHE:
-              tileSize = filterTwoSarcSize
-              combined *= 255
-              combined = combined.astype('uint8')
-              clahe = util.ApplyCLAHE([combined], (tileSize,tileSize), plot=False)
-              #clahe = clahe[0].astype('float') / float(np.max(clahe[0]))
-              clahe = clahe[0] / float(np.max(clahe[0]))
-              clahe[clahe < 0.02] = 0 # weird issue with clahe adding in background noise
-              combined = clahe
-              
-    
-          # routine to pad the image with a border of zeros. This helps with negating issue with shifting nyquist in FFT
+          # routine to pad the image with a border of zeros.
           if pad:
               combined = util.PadWithZeros(combined)
-    
           imgDim = np.shape(combined)
-        
           if plotRawImages:
               plt.figure()
               imshow(combined)
               plt.title(imgName)
               plt.colorbar()
-  
+
   # Read in Filters
   maxResponseDict = {}
-
-  # WT
-  WTfilter = util.GenerateWTFilter(WTFilterRoot=WTFilterRoot, filterTwoSarcSize = filterTwoSarcSize)
-  if fixWTFilter:
-      WTfilter[WTfilter > 0.6] = 0.6
-      WTfilter[WTfilter <0.25] = 0
-      WTfilter /= np.max(WTfilter)
-      WTfilter = WTfilter[20:,1:]
-
-  # Longitudinal
-  Longitudinalfilter = util.GenerateLongFilter(LongitudinalFilterRoot,LongitudinalTwoSarcLengthDict,filterTwoSarcLength = filterTwoSarcSize)
-  if fixLongFilter:
-      Longitudinalfilter[Longitudinalfilter > 0.7] = 0.7
-      Longitudinalfilter[Longitudinalfilter < 0.4] = 0
-      Longitudinalfilter /= np.max(Longitudinalfilter)
-      Longitudinalfilter = Longitudinalfilter[6:13,:-1]
-
-  # Loss
-  LossScale = float(filterTwoSarcSize) / float(LossFilterTwoSarcSize)
-  Lossfilter = util.GenerateLossFilter(LossFilterName,LossScale)
-
-  # Filter for the punishment of longitudinal regions of WT filter. Improves SNR
-  WTPunishFilter = Longitudinalfilter[2:-1,6:13]
+  WTfilter = util.ReadImg(WTFilterName)/255
+  Longitudinalfilter = util.ReadImg(LongitudinalFiltername)/255
+  Lossfilter = util.ReadImg(LossFilterName)/255
+  WTPunishFilter = util.ReadImg(WTPunishFilterName)/255
 
   filterDict = {'WT':WTfilter, 'Longitudinal':Longitudinalfilter, 'Loss':Lossfilter, 'WTPunishFilter':WTPunishFilter}
 
@@ -170,7 +109,7 @@ def gimmeStackedHits(imgName, WTthreshold, Longitudinalthreshold, gamma,returnMa
                               saveColoredFig=False,
                               gamma=gamma)
   if not returnMasks:
-    return Result.coloredImg
+    return Result
   else:
     return Result.coloredImg[:,:,0],Result.coloredImg[:,:,1],Result.coloredImg[:,:,2]
 

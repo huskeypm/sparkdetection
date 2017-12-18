@@ -171,19 +171,19 @@ def ApplyCLAHE(grayImgList, tileGridSize, clipLimit=2.0, plot=False):
     clahedimages = []
     for i,img in enumerate(grayImgList):
         clahedImage = clahe.apply(img)
-        #if plot:
-            #plt.figure()
-            #imshow(img,cmap='gray')
-            #plt.title
-            #f, (ax1, ax2) = plt.subplots(1,2)
-            #raw = ax1.imshow(img,cmap='gray')
-            #f.colorbar(raw, ax=ax1)
-            #ax1.set_title("Unaltered Image: "+str(i))
-            #altered = ax2.imshow(clahedImage,cmap='gray')
-            #f.colorbar(altered, ax=ax2)
-            #ax2.set_title("CLAHED Image "+str(i))
         clahedimages.append(clahedImage)
     return clahedimages
+
+# function to take raw myocyte png name, read, resize, renorm, CLAHE, save output
+def preprocessPNG(imgName, twoSarcSize, filterTwoSarcSize):
+  img = ReadImg(imgName)
+  scale = float(filterTwoSarcSize) / float(twoSarcSize)
+  rescaledImg = cv2.resize(img,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)
+  normed = renorm(rescaledImg)
+  clahed = ApplyCLAHE(normed,filterTwoSarcSize)
+  name, filetype = imgName.split('.')
+  cv2.imwrite(name+'_processed'+filetype,clahed)
+  
 
 def GenerateWTFilter(WTFilterRoot="./images/filterImgs/WT/", filterTwoSarcSize=24):
   WTFilterImgs = []
