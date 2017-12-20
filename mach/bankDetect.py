@@ -245,16 +245,11 @@ def TestFilters(testDataName,fusedFilterName,bulkFilterName,
                   label=label,outName=colorHitsOutName)
       elif colorHitsOutName != None and not saveColoredFig:
         colorImg = testDataName
-        # keep in mind when calling this function that red and green are for the matplotlib convention.
-        # CV2 spits out red -> blue
-        #resultContainer.coloredImg = colorHits(colorImg, red=resultContainer.stackedHits.WT,
-        #                                       green=resultContainer.stackedHits.Long,
-        #                                       label=label,outName=None, plotMe=False)
-        
         # changing since we return the angle at which the maximum response is
         resultContainer.coloredImg = colorHitsTT(colorImg, resultContainer.stackedHits.Long,
                                                  resultContainer.stackedHits.WT, iters,
                                                  label=label,outName=None,plotMe=False)
+
       return resultContainer
 
     else:
