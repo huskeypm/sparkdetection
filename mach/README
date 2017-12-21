@@ -1,27 +1,13 @@
 ### PNP project 
-Files copied from dot project on bitbucket
+To generate roc data:
+python optimer.py -optimize3
+(double check, should just do this from figs.py) 
 
-Input data are on /net/share/shared/data/hafnium
+python figs.py -paperfigs # generate figures for paper
+python figs.py -rocfigs # generate roc figures (after running optimizer.py) 
 
 
+
+--- misc 
 MACH.ipynb has validation routines written inside 
-
-
 fig3.py is currently optimized for scale, fusedThresh,bulkTresh
--- need to extrapolate results 
-
-optimize::Assess
-  TestParams (both thresh, scale, inv) 
-    bankDetect::TestFilters(both thresh, scale, inv)
-      bankDetect::DetectFilter (fused,scale)
-      bankDetect::DetectFilter (fused,scale)
--- add new false/true positive images 
-  I think they are OK 
--- add scale as an optimizable variable 
-  Not easy to test 
-      
-
-    
-### MYOCYTE project
-
-

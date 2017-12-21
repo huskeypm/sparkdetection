@@ -341,6 +341,30 @@ if __name__ == "__main__":
         display=False
       )
       quit()
+    if(arg=="-optimizeLight"):
+    # coarse/fine
+      #ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
+      #bt = np.concatenate([np.linspace(0.4,0.55,7),np.linspace(0.55,0.65,15)   ])
+      bt = np.linspace(0.05,0.50,3)    
+      ft = np.linspace(0.05,0.30,3)    
+      scales = [1.2]  # tried optimizing, but performance seemed to decline quickly far from 1.2 nspace(1.0,1.5,6)  
+      Assess(
+        fusedThreshes = ft,
+        bulkThreshes = bt,
+        scales = scales,
+        sigma_n = 1.,
+        useFilterInv=True,   
+        hdf5Name = "optimizeinvscale.h5",
+        display=False
+      )
+      quit()
+  
+
+
+
+
+
+  raise RuntimeError("Arguments not understood")
   
 
 

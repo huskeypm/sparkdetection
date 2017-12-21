@@ -23,7 +23,7 @@ def GenFig3():
   TestBulk()
 
 import optimizer
-def GenFigROC():
+def GenFigROC(loadOnly=False):
 
   # coarse/fine
   #ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
@@ -32,7 +32,8 @@ def GenFigROC():
   ft = np.linspace(0.05,0.30,10)
   scales = [1.2]  # tried optimizing, but performance seemed to decline quickly far from 1.2 nspace(1.0,1.5,6)  
   hdf5Name = "optimizeinvscale.h5"
-  if 0:
+
+  if loadOnly!=True: 
     optimizer.Assess(
         fusedThreshes = ft,
         bulkThreshes = bt,
@@ -42,6 +43,8 @@ def GenFigROC():
         hdf5Name = hdf5Name,
         display=False
       )
+  else:
+    print "Reading ", hdf5Name 
   import pandas as pd
   df = pd.read_hdf(hdf5Name,'table') 
 
@@ -205,9 +208,51 @@ def Extrapolate(
 
 
   
-#needs work GenFigN()
-# Gneerates fig 3, as well as extrapolation values 
-GenFig3()
-# 
-#GenFigROC()
   
+#!/usr/bin/env python
+import sys
+##################################
+#
+# Revisions
+#       10.08.10 inception
+#
+##################################
+
+#
+# ROUTINE  
+#
+
+#
+# MAIN routine executed when launching this script from command line 
+#
+if __name__ == "__main__":
+  import sys
+  msg = helpmsg()
+  remap = "none"
+
+  if len(sys.argv) < 2:
+      raise RuntimeError(msg)
+
+  #fileIn= sys.argv[1]
+  #if(len(sys.argv)==3):
+  #  1
+  #  #print "arg"
+
+  # Loops over each argument in the command line 
+  for i,arg in enumerate(sys.argv):
+    # calls 'doit' with the next argument following the argument '-validation'
+    if(arg=="-paperfigs"):     
+      GenFig3()
+    if(arg=="-rocfigs"):     
+      GenFig3(loadOnly=True)
+  
+
+
+
+
+
+  raise RuntimeError("Arguments not understood")
+
+
+
+
