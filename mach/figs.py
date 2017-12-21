@@ -208,7 +208,6 @@ def Extrapolate(
 
 
   
-  
 #!/usr/bin/env python
 import sys
 ##################################
@@ -225,7 +224,7 @@ import sys
 #
 # MAIN routine executed when launching this script from command line 
 #
-if __name__ == "__main__":
+if __name__ == "__maisn__":
   import sys
   msg = helpmsg()
   remap = "none"

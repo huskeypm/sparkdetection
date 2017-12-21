@@ -305,25 +305,6 @@ if __name__ == "__main__":
 
   # Loops over each argument in the command line 
   for i,arg in enumerate(sys.argv):
-    # calls 'doit' with the next argument following the argument '-validation'
-    if(arg=="-optimize"):
-      Assess()
-      quit()
-    if(arg=="-optimize2"):
-    # coarse/fine
-      #ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
-      #bt = np.concatenate([np.linspace(0.4,0.55,7),np.linspace(0.55,0.65,15)   ])
-      ft = np.linspace(0.01,0.02,9)
-      bt = np.linspace(0.01,0.02,9)
-      Assess(
-        fusedThreshes = ft,
-        bulkThreshes = bt,
-        sigma_n = 1.,
-        useFilterInv=False, 
-        hdf5Name = "optimize2.h5",
-        display=False
-      )
-      quit()
     if(arg=="-optimize3"):
     # coarse/fine
       #ft = np.concatenate([np.linspace(0.5,0.7,7),np.linspace(0.7,0.95,15)   ])
