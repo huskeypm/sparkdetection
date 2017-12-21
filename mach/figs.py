@@ -243,7 +243,7 @@ if __name__ == "__maisn__":
     if(arg=="-paperfigs"):     
       GenFig3()
     if(arg=="-rocfigs"):     
-      GenFig3(loadOnly=True)
+      GenFigROC(loadOnly=True)
   
 
 
