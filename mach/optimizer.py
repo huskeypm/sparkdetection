@@ -14,7 +14,105 @@ root = "./testimages/"
 sigma_n = 22. # based on Ryan's data 
 fusedThresh = 1000.
 bulkThresh = 1050. 
+def TestParams(fusedThresh=1000.,bulkThresh=1050.,sigma_n=1.,display=False,useFilterInv=False):
+    ### Fused pore
+    testCase = empty()
+    testCase.name = root + 'clahe_Best.jpg'
+    testCase.subsection=[340,440,400,500]
+    #daImg = cv2.imread(testCase.name)
+    #cut = daImg[testCase.subsection[0]:testCase.subsection[1],testCase.subsection[2]:testCase.subsection[3]]
+    #imshow(cut)
 
+    testCase.filter1 = root+'fusedCellTEM.png' 
+    testCase.threshFilter1 = fusedThresh
+    testCase.filter2 = root+'bulkCellTEM.png' 
+    testCase.threshFilter2 = bulkThresh
+    testCase.sigma_n= sigma_n, # focus on best angle for fused pore data 
+    testCase.iters = [30], # focus on best angle for fused pore data 
+    testCase.label = None
+
+    fusedPore_fusedTEM, bulkPore_fusedTEM = bD.TestFilters(
+      testCase.name, # testData
+      testCase.filter1,         # fusedfilter Name
+      testCase.filter2,       # bulkFilter name
+      subsection=testCase.subsection, #[200,400,200,500],   # subsection of testData
+      threshFilter1 = testCase.filter1,  
+      threshFilter2 = testCase.filter2,
+      label = testCase.label,
+      sigma_n = testCase.sigma_n,
+      iters = testCase.iters,
+      useFilterInv=useFilterInv,
+      display=display
+    )        
+
+    ### Bulk pore
+    testCase = empty()
+    testCase.name = root+'clahe_Best.jpg'
+    testCase.subsection=[250,350,50,150]
+    #daImg = cv2.imread(testCase.name)
+    #cut = daImg[testCase.subsection[0]:testCase.subsection[1],testCase.subsection[2]:testCase.subsection[3]]
+    #imshow(cut)
+    testCase.filter1 = root+'fusedCellTEM.png' 
+    testCase.threshFilter1 = fusedThresh
+    testCase.filter2 = root+'bulkCellTEM.png' 
+    testCase.threshFilter2 = bulkThresh
+    testCase.sigma_n= sigma_n, 
+    testCase.iters = [5], # focus on best angle for bulk pore data 
+    testCase.label = "filters_on_pristine.png"
+
+    fusedPore_bulkTEM, bulkPore_bulkTEM = bD.TestFilters(
+      testCase.name,
+      testCase.filter1,                # fusedfilter Name
+      testCase.filter2,              # bulkFilter name
+      subsection=testCase.subsection, #[200,400,200,500],   # subsection of testData
+      threshFilter1 = testCase.filter1,  
+      threshFilter2 = testCase.filter2,
+      label = testCase.label,
+      sigma_n = testCase.sigma_n,
+      iters = testCase.iters,
+      useFilterInv=useFilterInv,
+      display=display
+     )        
+    
+    ## This approach assess the number of hits of filter A overlapping with regions marked as 'A' in the test data
+    ## negatives refer to hits of filter B on marked 'A' regions
+    #if 0:   
+    #  fusedPS, bulkNS= Score(fusedPore_fusedTEM.stackedHits,bulkPore_fusedTEM.stackedHits,
+    #                       "testimages/fusedMarked.png", 
+    #                       mode="nohits",
+    #                       display=display)
+#
+    #  bulkPS, fusedNS = Score(bulkPore_bulkTEM.stackedHits,fusedPore_bulkTEM.stackedHits,
+    #                        "testimages/bulkMarked.png",
+    #                        mode="nohits",
+    #                        display=display)   
+
+    ## This approach assess filter A hits in marked regions of A, penalizes filter A hits in marked regions 
+    ## of test set B 
+    if 1: 
+      fusedPS, fusedNS= Score(fusedPore_fusedTEM.stackedHits,fusedPore_bulkTEM.stackedHits,
+                           positiveTest="testimages/fusedMarked.png", 
+                           #negativeTest="testimages/bulkMarked.png", 
+                           mode="nohits",
+                           display=display)
+
+      bulkPS, bulkNS = Score(bulkPore_bulkTEM.stackedHits,bulkPore_fusedTEM.stackedHits,
+                            positiveTest="testimages/bulkMarked.png",
+                            #negativeTest="testimages/fusedMarked.png",
+                            mode="nohits",
+                            display=display)   
+    
+    ## 
+    print fusedThresh,bulkThresh,fusedPS,bulkNS,bulkPS,fusedNS
+    return fusedPS,bulkNS,bulkPS,fusedNS
+
+
+#
+
+##
+## This function essentially measures overlap between detected regions and hand-annotated regions
+## Positive hits are generated when correctly detected/annotated regions are aligned
+##
 def Score(positiveHits,negativeHits,
           positiveTest,               
           mode="default", # negative hits are assessed by 'negativeHits' within positive Hits region
