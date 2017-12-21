@@ -207,7 +207,7 @@ def Extrapolate(
   
 #needs work GenFigN()
 # Gneerates fig 3, as well as extrapolation values 
-GenFig3()
+#GenFig3()
 # 
-#GenFigROC()
+GenFigROC()
   
