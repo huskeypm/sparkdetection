@@ -1,0 +1,46 @@
+This is a file to describe the observations that Dylan made on 8/27/2018 on Xin's data (from Bill Louch's Lab).
+This dataset is for spark detection. Xin wishes to classify :
+	1. Spark amplitude
+	2. FWHM - axial full width at half-maximum
+	3. FDHM - lateral full width at half-maximum
+	4. Time to peak amplitude (This would be the easiest overall to classify)
+
+Data is located at: https://drive.google.com/drive/folders/1SZWcBYGxgdf6sQ5hETSBTNh9lYrDA_vO
+
+Really promising data in folder:
+./new/16.lsm - good SNR and lots of sparks
+./new/17.lsm - promising!
+
+Alright data:
+./new/5.lsm - 2 decently strong sparks
+./new/6.lsm - couple of OKAY sparks
+./new/9.lsm - 2 very slow Ca transients (sparks or not?)
+./new/10.lsm - 1 spark
+./new/13.lsm - lots of small sparks
+./new/14.lsm - high noise amplitude but lots of sparks
+./new/15.lsm - no sparks but observable increase in globabl fluorescent intensity across time
+./new/18.lsm - strong Ca waves
+./new/20.lsm - Alright. A few good Ca sparks
+./new/21.lsm - OKAY
+./14.lsm - A couple of good sparks
+./6.lsm - Ca wave
+
+Challenging Data:
+./new/1.lsm
+./new/2.lsm
+./new/3.lsm
+./new/4.lsm
+./new/7.lsm
+./new/8.lsm
+./new/11.lsm
+./new/12.lsm
+./new/19.lsm
+./new/20.lsm
+./new/21.lsm
+./16.lsm
+./10.lsm
+./13.lsm
+./2.lsm
+
+Ideas for classification:
+ - use a moving spatiotemporal average (3D cuboid filter) of maybe 3-5 frames and 3px x 3px and subtract that out from each image, we could begin to attenuate the noise. 
